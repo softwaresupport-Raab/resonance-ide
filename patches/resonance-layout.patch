@@ -1,0 +1,51 @@
+diff --git a/src/vs/workbench/browser/layout.ts b/src/vs/workbench/browser/layout.ts
+index da337f0..890e151 100644
+--- a/src/vs/workbench/browser/layout.ts
++++ b/src/vs/workbench/browser/layout.ts
+@@ -2243,6 +2243,10 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
+ 			case Parts.BANNER_PART:
+ 				return this.setBannerHidden(hidden);
+ 			case Parts.AUXILIARYBAR_PART:
++				// Resonance: Secondary side bar is always visible
++				if (hidden) {
++					return;
++				}
+ 				return this.setAuxiliaryBarHidden(hidden);
+ 			case Parts.PANEL_PART:
+ 				return this.setPanelHidden(hidden);
+diff --git a/src/vs/workbench/browser/parts/auxiliarybar/auxiliaryBarActions.ts b/src/vs/workbench/browser/parts/auxiliarybar/auxiliaryBarActions.ts
+index 5abfb88..c6f6606 100644
+--- a/src/vs/workbench/browser/parts/auxiliarybar/auxiliaryBarActions.ts
++++ b/src/vs/workbench/browser/parts/auxiliarybar/auxiliaryBarActions.ts
+@@ -84,16 +84,8 @@ export class ToggleAuxiliaryBarAction extends Action2 {
+ 
+ registerAction2(ToggleAuxiliaryBarAction);
+ 
+-MenuRegistry.appendMenuItem(MenuId.AuxiliaryBarTitle, {
+-	command: {
+-		id: ToggleAuxiliaryBarAction.ID,
+-		title: localize('closeSecondarySideBar', 'Hide Secondary Side Bar'),
+-		icon: closeIcon
+-	},
+-	group: 'navigation',
+-	order: 2,
+-	when: ContextKeyExpr.equals(`config.${LayoutSettings.ACTIVITY_BAR_LOCATION}`, ActivityBarPosition.DEFAULT)
+-});
++// Resonance: Close button removed — secondary side bar is always visible
++// MenuRegistry.appendMenuItem(MenuId.AuxiliaryBarTitle, { ... });
+ 
+ registerAction2(class extends Action2 {
+ 	constructor() {
+diff --git a/src/vs/workbench/browser/parts/auxiliarybar/auxiliaryBarPart.ts b/src/vs/workbench/browser/parts/auxiliarybar/auxiliaryBarPart.ts
+index 6791fd4..c2a460d 100644
+--- a/src/vs/workbench/browser/parts/auxiliarybar/auxiliaryBarPart.ts
++++ b/src/vs/workbench/browser/parts/auxiliarybar/auxiliaryBarPart.ts
+@@ -231,7 +231,7 @@ export class AuxiliaryBarPart extends AbstractPaneCompositePart {
+ 			new SubmenuAction('workbench.action.panel.position', localize('activity bar position', "Activity Bar Position"), positionActions),
+ 			toAction({ id: ToggleSidebarPositionAction.ID, label: currentPositionRight ? localize('move second side bar left', "Move Secondary Side Bar Left") : localize('move second side bar right', "Move Secondary Side Bar Right"), run: () => this.commandService.executeCommand(ToggleSidebarPositionAction.ID) }),
+ 			toggleShowLabelsAction,
+-			toAction({ id: ToggleAuxiliaryBarAction.ID, label: localize('hide second side bar', "Hide Secondary Side Bar"), run: () => this.commandService.executeCommand(ToggleAuxiliaryBarAction.ID) })
++			// Resonance: "Hide Secondary Side Bar" action removed — always visible
+ 		]);
+ 	}
+ 

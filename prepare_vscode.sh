@@ -177,6 +177,21 @@ for file in ../patches/user/*.patch; do
 done
 # }}}
 
+# {{{ copy Resonance extension VSIX for builtInExtensions
+VSIX_SRC=""
+if [[ -f "../resonance-extension/dist/resonance-3.57.3.vsix" ]]; then
+  VSIX_SRC="../resonance-extension/dist/resonance-3.57.3.vsix"
+fi
+
+if [[ -n "${VSIX_SRC}" ]]; then
+  mkdir -p resonance
+  cp "${VSIX_SRC}" resonance/resonance.vsix
+  echo "Copied Resonance VSIX to resonance/resonance.vsix"
+else
+  echo "WARNING: Resonance VSIX not found — builtInExtension will be skipped at build time"
+fi
+# }}}
+
 set -x
 
 # {{{ install dependencies

@@ -614,6 +614,7 @@
     "workbench.statusBar.visible": false,
     "workbench.startupEditor": "none",
     "workbench.tips.enabled": false,
+    "workbench.secondarySideBar.defaultVisibility": "visible",
     "editor.minimap.enabled": false,
     "editor.lineNumbers": "off",
     "editor.inlineSuggest.enabled": false,
@@ -638,5 +639,24 @@
         }
       }
     }
-  }
+  },
+  "builtInExtensions": [
+    {
+      "name": "resonance-team.resonance",
+      "version": "3.57.3",
+      "sha256": "8ed2c92935de59b6a3b862726619f4efa79ff32fd728f0a2549c84599551cbd8",
+      "repo": "https://github.com/cline/cline",
+      "vsix": "resonance/resonance.vsix",
+      "metadata": {
+        "id": "a3b3e3c3-d4e4-4f5f-a6b6-c7d7e7f7a8b8",
+        "publisherId": {
+          "publisherId": "b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e",
+          "publisherName": "resonance-team",
+          "displayName": "Resonance Team",
+          "flags": ""
+        },
+        "publisherDisplayName": "Resonance Team"
+      }
+    }
+  ]
 }
