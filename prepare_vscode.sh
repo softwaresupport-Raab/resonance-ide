@@ -183,8 +183,9 @@ if [[ -f "../resonance-extension/dist/resonance-3.57.1.vsix" ]]; then
   VSIX_SRC="../resonance-extension/dist/resonance-3.57.1.vsix"
 fi
 
+mkdir -p resonance
+
 if [[ -n "${VSIX_SRC}" ]]; then
-  mkdir -p resonance
   cp "${VSIX_SRC}" resonance/resonance.vsix
   echo "Copied Resonance VSIX to resonance/resonance.vsix"
 else
