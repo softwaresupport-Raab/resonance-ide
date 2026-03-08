@@ -179,8 +179,8 @@ done
 
 # {{{ copy Resonance extension VSIX for builtInExtensions
 VSIX_SRC=""
-if [[ -f "../resonance-extension/dist/resonance-3.57.3.vsix" ]]; then
-  VSIX_SRC="../resonance-extension/dist/resonance-3.57.3.vsix"
+if [[ -f "../resonance-extension/dist/resonance-3.57.1.vsix" ]]; then
+  VSIX_SRC="../resonance-extension/dist/resonance-3.57.1.vsix"
 fi
 
 if [[ -n "${VSIX_SRC}" ]]; then

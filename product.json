@@ -643,8 +643,8 @@
   "builtInExtensions": [
     {
       "name": "resonance-team.resonance",
-      "version": "3.57.3",
-      "sha256": "8ed2c92935de59b6a3b862726619f4efa79ff32fd728f0a2549c84599551cbd8",
+      "version": "3.57.1",
+      "sha256": "837bdb3f2eae5e16eeaabb9f954b2e4dde8ef75385a765eabe06686a80f4728c",
       "repo": "https://github.com/cline/cline",
       "vsix": "resonance/resonance.vsix",
       "metadata": {
