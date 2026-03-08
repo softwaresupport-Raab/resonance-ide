@@ -609,24 +609,41 @@
     }
   },
   "configurationDefaults": {
-    "workbench.colorTheme": "Default Dark Modern",
+    "workbench.colorTheme": "FrostedAura Dark",
+    "workbench.iconTheme": "helium-icon-theme",
     "workbench.activityBar.location": "hidden",
     "workbench.statusBar.visible": false,
+    "workbench.sideBar.location": "left",
+    "workbench.panel.defaultLocation": "bottom",
+    "workbench.editor.enablePreview": false,
     "workbench.startupEditor": "none",
     "workbench.tips.enabled": false,
     "workbench.secondarySideBar.defaultVisibility": "visible",
-    "editor.minimap.enabled": false,
+    "outline.showView": false,
+    "timeline.showView": false,
+    "editor.wordWrap": "bounded",
+    "editor.wordWrapColumn": 100,
     "editor.lineNumbers": "off",
+    "editor.minimap.enabled": false,
+    "editor.lineHeight": 1.5,
+    "editor.fontSize": 14,
+    "editor.fontFamily": "SF Mono, Monaco, 'Courier New', monospace",
+    "editor.renderWhitespace": "none",
+    "editor.renderLineHighlight": "none",
     "editor.inlineSuggest.enabled": false,
     "editor.quickSuggestions": {
       "other": false,
       "comments": false,
       "strings": false
     },
+    "files.defaultLanguage": "markdown",
+    "markdown.preview.openMarkdownLinks": "inEditor",
     "breadcrumbs.enabled": false,
     "explorer.confirmDelete": false,
     "explorer.confirmDragAndDrop": false,
+    "window.menuBarVisibility": "compact",
     "github.copilot.enable": { "*": false },
+    "github.copilot.inlineSuggest.enable": false,
     "mcp": {
       "servers": {
         "playwright": {
@@ -656,6 +673,40 @@
           "flags": ""
         },
         "publisherDisplayName": "Resonance Team"
+      }
+    },
+    {
+      "name": "ImKKingshuk.frostedaura",
+      "version": "1.2.5",
+      "sha256": "5256d8d84401fa7fc536eaaaa2b0457430c1ac04f19649f903395e9af6d5302c",
+      "repo": "",
+      "vsix": "resonance/frostedaura.vsix",
+      "metadata": {
+        "id": "frostedaura-theme-id",
+        "publisherId": {
+          "publisherId": "frostedaura-publisher-id",
+          "publisherName": "ImKKingshuk",
+          "displayName": "ImKKingshuk",
+          "flags": ""
+        },
+        "publisherDisplayName": "ImKKingshuk"
+      }
+    },
+    {
+      "name": "helgardrichard.helium-icon-theme",
+      "version": "1.0.0",
+      "sha256": "b92029b935d082f3e226904bf75777997df949ada5daf2c8005a41a3e719e21e",
+      "repo": "",
+      "vsix": "resonance/helium-icon-theme.vsix",
+      "metadata": {
+        "id": "helium-icon-theme-id",
+        "publisherId": {
+          "publisherId": "helium-icon-publisher-id",
+          "publisherName": "helgardrichard",
+          "displayName": "helgardrichard",
+          "flags": ""
+        },
+        "publisherDisplayName": "helgardrichard"
       }
     }
   ]

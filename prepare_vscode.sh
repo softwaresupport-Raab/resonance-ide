@@ -190,6 +190,15 @@ if [[ -n "${VSIX_SRC}" ]]; then
 else
   echo "WARNING: Resonance VSIX not found — builtInExtension will be skipped at build time"
 fi
+
+for THEME_VSIX in frostedaura.vsix helium-icon-theme.vsix; do
+  if [[ -f "../${THEME_VSIX}" ]]; then
+    cp "../${THEME_VSIX}" "resonance/${THEME_VSIX}"
+    echo "Copied ${THEME_VSIX} to resonance/${THEME_VSIX}"
+  else
+    echo "WARNING: ${THEME_VSIX} not found"
+  fi
+done
 # }}}
 
 set -x
