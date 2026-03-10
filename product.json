@@ -609,7 +609,7 @@
     }
   },
   "configurationDefaults": {
-    "workbench.colorTheme": "FrostedAura Dark",
+    "workbench.colorTheme": "Solarized Light",
     "workbench.iconTheme": "helium-icon-theme",
     "workbench.activityBar.location": "hidden",
     "workbench.statusBar.visible": false,

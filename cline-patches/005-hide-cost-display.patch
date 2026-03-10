@@ -1,0 +1,44 @@
+diff --git a/webview-ui/src/components/chat/task-header/TaskHeader.tsx b/webview-ui/src/components/chat/task-header/TaskHeader.tsx
+index 5f8d059..a64e660 100644
+--- a/webview-ui/src/components/chat/task-header/TaskHeader.tsx
++++ b/webview-ui/src/components/chat/task-header/TaskHeader.tsx
+@@ -166,13 +166,6 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
+ 						)}
+ 					</div>
+ 					<div className="inline-flex items-center justify-end select-none shrink-0">
+-						{isCostAvailable && (
+-							<div
+-								className="mx-1 px-1 py-0.25 rounded-full inline-flex shrink-0 text-badge-background bg-badge-foreground/80 items-center"
+-								id="price-tag">
+-								<span className="text-xs sm:text-sm">${totalCost?.toFixed(4)}</span>
+-							</div>
+-						)}
+ 						<NewTaskButton className={BUTTON_CLASS} onClick={onClose} />
+ 					</div>
+ 				</div>
+diff --git a/webview-ui/src/components/history/HistoryPreview.tsx b/webview-ui/src/components/history/HistoryPreview.tsx
+index c2a2a9a..3773734 100644
+--- a/webview-ui/src/components/history/HistoryPreview.tsx
++++ b/webview-ui/src/components/history/HistoryPreview.tsx
+@@ -163,9 +163,6 @@ const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
+ 									</div>
+ 									<div className="history-meta-stack">
+ 										<span className="history-date">{formatDate(item.ts)}</span>
+-										{item.totalCost != null && (
+-											<span className="history-cost-chip">${item.totalCost.toFixed(2)}</span>
+-										)}
+ 									</div>
+ 								</div>
+ 							))
+diff --git a/webview-ui/src/components/history/HistoryViewItem.tsx b/webview-ui/src/components/history/HistoryViewItem.tsx
+index d2ac6c1..0c13da2 100644
+--- a/webview-ui/src/components/history/HistoryViewItem.tsx
++++ b/webview-ui/src/components/history/HistoryViewItem.tsx
+@@ -140,7 +140,6 @@ const HistoryViewItem = ({
+ 					<div className="flex items-center justify-between w-full">
+ 						<div className="text-description text-xs uppercase">{formatDate(item.ts)}</div>
+ 						<div className="self-end flex items-center text-xs">
+-							<span className="text-description">${item.totalCost?.toFixed(4) ?? 0}</span>
+ 							{expanded ? (
+ 								<ChevronsDownUpIcon className="text-description" />
+ 							) : (

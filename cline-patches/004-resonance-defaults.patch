@@ -1,0 +1,67 @@
+diff --git a/cli/src/agent/ClineAgent.ts b/cli/src/agent/ClineAgent.ts
+index be047e2..b9278c1 100644
+--- a/cli/src/agent/ClineAgent.ts
++++ b/cli/src/agent/ClineAgent.ts
+@@ -35,7 +35,7 @@ import {
+ 	xaiModels,
+ } from "@shared/api"
+ import type { ClineAsk, ClineMessage as ClineMessageType } from "@shared/ExtensionMessage"
+-import { CLI_ONLY_COMMANDS, VSCODE_ONLY_COMMANDS } from "@shared/slashCommands"
++import { CLI_ONLY_COMMANDS } from "@shared/slashCommands"
+ import { ProviderToApiKeyMap } from "@shared/storage"
+ import { getProviderModelIdKey } from "@shared/storage/provider-keys"
+ import { ClineEndpoint } from "@/config.js"
+@@ -1110,12 +1110,11 @@ export class ClineAgent implements acp.Agent {
+ 			// Get all available commands from Cline
+ 			const response = await getAvailableSlashCommands(controller, {})
+ 
+-			// Filter out CLI-only and VS Code-only commands
++			// Filter out CLI-only commands
+ 			const cliOnlyNames = new Set(CLI_ONLY_COMMANDS.map((c) => c.name))
+-			const vscodeOnlyNames = new Set(VSCODE_ONLY_COMMANDS.map((c) => c.name))
+ 
+ 			const filteredCommands = response.commands.filter(
+-				(cmd) => cmd.cliCompatible && !cliOnlyNames.has(cmd.name) && !vscodeOnlyNames.has(cmd.name),
++				(cmd) => cmd.cliCompatible && !cliOnlyNames.has(cmd.name),
+ 			)
+ 
+ 			// Convert to ACP AvailableCommand format
+diff --git a/src/shared/AutoApprovalSettings.ts b/src/shared/AutoApprovalSettings.ts
+index 7ea185e..22c0f66 100644
+--- a/src/shared/AutoApprovalSettings.ts
++++ b/src/shared/AutoApprovalSettings.ts
+@@ -33,7 +33,7 @@ export const DEFAULT_AUTO_APPROVAL_SETTINGS: AutoApprovalSettings = {
+ 	actions: {
+ 		readFiles: true,
+ 		readFilesExternally: false,
+-		editFiles: false,
++		editFiles: true, // Resonance: true by default — non-dev users expect seamless document edits without approval prompts
+ 		editFilesExternally: false,
+ 		executeSafeCommands: true,
+ 		executeAllCommands: false,
+diff --git a/src/shared/storage/state-keys.ts b/src/shared/storage/state-keys.ts
+index 50540f2..35ba960 100644
+--- a/src/shared/storage/state-keys.ts
++++ b/src/shared/storage/state-keys.ts
+@@ -246,7 +246,7 @@ const USER_SETTINGS_FIELDS = {
+ 	},
+ 	telemetrySetting: { default: "unset" as TelemetrySetting },
+ 	planActSeparateModelsSetting: { default: false as boolean, isComputed: true },
+-	enableCheckpointsSetting: { default: true as boolean },
++	enableCheckpointsSetting: { default: false as boolean }, // Resonance: disabled by default — reduces friction for non-technical users
+ 	shellIntegrationTimeout: { default: 4000 as number },
+ 	defaultTerminalProfile: { default: "default" as string },
+ 	terminalOutputLineLimit: { default: 500 as number },
+diff --git a/webview-ui/src/context/ExtensionStateContext.tsx b/webview-ui/src/context/ExtensionStateContext.tsx
+index 865f534..70ccc86 100644
+--- a/webview-ui/src/context/ExtensionStateContext.tsx
++++ b/webview-ui/src/context/ExtensionStateContext.tsx
+@@ -248,7 +248,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 		telemetrySetting: "unset",
+ 		distinctId: "",
+ 		planActSeparateModelsSetting: true,
+-		enableCheckpointsSetting: true,
++		enableCheckpointsSetting: false, // Resonance: matches state-keys default
+ 		mcpDisplayMode: DEFAULT_MCP_DISPLAY_MODE,
+ 		globalClineRulesToggles: {},
+ 		localClineRulesToggles: {},

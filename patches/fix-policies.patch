@@ -1,8 +1,27 @@
 diff --git a/build/.moduleignore b/build/.moduleignore
-index 5b040cc..8d5fd71 100644
+index ed36151..8d5fd71 100644
 --- a/build/.moduleignore
 +++ b/build/.moduleignore
-@@ -128,9 +128,11 @@ vsda/**
+@@ -63,11 +63,11 @@ fsevents/test/**
+ !@vscode/tree-sitter-wasm/wasm/tree-sitter-powershell.wasm
+ !@vscode/tree-sitter-wasm/wasm/tree-sitter-bash.wasm
+ 
+-native-keymap/binding.gyp
+-native-keymap/build/**
+-native-keymap/src/**
+-native-keymap/deps/**
+-!native-keymap/build/Release/*.node
++@vscodium/native-keymap/binding.gyp
++@vscodium/native-keymap/build/**
++@vscodium/native-keymap/src/**
++@vscodium/native-keymap/deps/**
++!@vscodium/native-keymap/build/Release/*.node
+ 
+ native-is-elevated/binding.gyp
+ native-is-elevated/build/**
+@@ -126,13 +126,15 @@ vsda/**
+ !vsda/rust/web/**
+ !vsda/rust/bundler/**
  
 -@vscode/policy-watcher/build/**
 -@vscode/policy-watcher/.husky/**
@@ -21,28 +40,62 @@ index 5b040cc..8d5fd71 100644
 +@vscodium/policy-watcher/index.d.ts
 +!@vscodium/policy-watcher/build/Release/vscodium-policy-watcher.node
  
+ @vscode/windows-ca-certs/**/*
+ !@vscode/windows-ca-certs/package.json
 diff --git a/eslint.config.js b/eslint.config.js
-index f8077c2..182d6ce 100644
+index 47eeebf..182d6ce 100644
 --- a/eslint.config.js
 +++ b/eslint.config.js
-@@ -1448,3 +1448,3 @@ export default tseslint.config(
+@@ -1446,7 +1446,7 @@ export default tseslint.config(
+ 						'@vscode/ripgrep',
+ 						'@vscode/iconv-lite-umd',
  						'@vscode/native-watchdog',
 -						'@vscode/policy-watcher',
 +						'@vscodium/policy-watcher',
  						'@vscode/proxy-agent',
+ 						'@vscode/spdlog',
+ 						'@vscode/windows-process-tree',
+@@ -1463,7 +1463,7 @@ export default tseslint.config(
+ 						'https',
+ 						'minimist',
+ 						'node:module',
+-						'native-keymap',
++						'@vscodium/native-keymap',
+ 						'net',
+ 						'node-pty',
+ 						'os',
 diff --git a/package-lock.json b/package-lock.json
-index a991591..fb05fad 100644
+index a0dd545..c1f2f89 100644
 --- a/package-lock.json
 +++ b/package-lock.json
-@@ -21,3 +21,2 @@
+@@ -19,7 +19,6 @@
+         "@vscode/deviceid": "^0.1.1",
+         "@vscode/iconv-lite-umd": "0.7.1",
          "@vscode/native-watchdog": "^1.4.6",
 -        "@vscode/policy-watcher": "^1.3.2",
          "@vscode/proxy-agent": "^0.37.0",
-@@ -33,2 +32,3 @@
-         "@vscodium/native-keymap": "3.3.7-258424",
+         "@vscode/ripgrep": "^1.15.13",
+         "@vscode/spdlog": "^0.15.7",
+@@ -30,6 +29,8 @@
+         "@vscode/windows-mutex": "^0.5.0",
+         "@vscode/windows-process-tree": "^0.6.0",
+         "@vscode/windows-registry": "^1.1.0",
++        "@vscodium/native-keymap": "3.3.7-258424",
 +        "@vscodium/policy-watcher": "^1.3.2-252465",
          "@xterm/addon-clipboard": "^0.3.0-beta.109",
-@@ -3345,22 +3345,2 @@
+         "@xterm/addon-image": "^0.10.0-beta.109",
+         "@xterm/addon-ligatures": "^0.11.0-beta.109",
+@@ -47,7 +48,6 @@
+         "kerberos": "2.1.1",
+         "minimist": "^1.2.8",
+         "native-is-elevated": "0.9.0",
+-        "native-keymap": "^3.3.5",
+         "node-pty": "^1.2.0-beta.10",
+         "open": "^10.1.2",
+         "tas-client": "0.3.1",
+@@ -3343,26 +3343,6 @@
+       "hasInstallScript": true,
+       "license": "MIT"
      },
 -    "node_modules/@vscode/policy-watcher": {
 -      "version": "1.3.7",
@@ -65,8 +118,19 @@ index a991591..fb05fad 100644
 -      }
 -    },
      "node_modules/@vscode/proxy-agent": {
-@@ -3681,2 +3661,22 @@
+       "version": "0.37.0",
+       "resolved": "https://registry.npmjs.org/@vscode/proxy-agent/-/proxy-agent-0.37.0.tgz",
+@@ -3672,6 +3652,33 @@
+       "hasInstallScript": true,
+       "license": "MIT"
      },
++    "node_modules/@vscodium/native-keymap": {
++      "version": "3.3.7-258424",
++      "resolved": "https://registry.npmjs.org/@vscodium/native-keymap/-/native-keymap-3.3.7-258424.tgz",
++      "integrity": "sha512-HZ20QfExV0kE2l939yE3wn0LezSV7BcpxOFmlUMUHBQbdANMSLkwzo6Zw1xOEZDoYm3VTDHt8/+WwLBR2MpA3A==",
++      "hasInstallScript": true,
++      "license": "MIT"
++    },
 +    "node_modules/@vscodium/policy-watcher": {
 +      "version": "1.3.2-252465",
 +      "resolved": "https://registry.npmjs.org/@vscodium/policy-watcher/-/policy-watcher-1.3.2-252465.tgz",
@@ -88,20 +152,87 @@ index a991591..fb05fad 100644
 +      }
 +    },
      "node_modules/@webassemblyjs/ast": {
+       "version": "1.14.1",
+       "resolved": "https://registry.npmjs.org/@webassemblyjs/ast/-/ast-1.14.1.tgz",
+@@ -12739,9 +12746,10 @@
+       }
+     },
+     "node_modules/napi-build-utils": {
+-      "version": "1.0.2",
+-      "resolved": "https://registry.npmjs.org/napi-build-utils/-/napi-build-utils-1.0.2.tgz",
+-      "integrity": "sha512-ONmRUqK7zj7DWX0D9ADe03wbwOBZxNAfF20PlGfCWQcD3+/MakShIHrMqx9YwPTfxDdF1zLeL+RGZiR9kGMLdg=="
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/napi-build-utils/-/napi-build-utils-2.0.0.tgz",
++      "integrity": "sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==",
++      "license": "MIT"
+     },
+     "node_modules/native-is-elevated": {
+       "version": "0.9.0",
+@@ -12750,13 +12758,6 @@
+       "hasInstallScript": true,
+       "license": "MIT"
+     },
+-    "node_modules/native-keymap": {
+-      "version": "3.3.9",
+-      "resolved": "https://registry.npmjs.org/native-keymap/-/native-keymap-3.3.9.tgz",
+-      "integrity": "sha512-d/ydQ5x+GM5W0dyAjFPwexhtc9CDH1g/xWZESS5CXk16ThyFzSBLvlBJq1+FyzUIFf/F2g1MaHdOpa6G9150YQ==",
+-      "hasInstallScript": true,
+-      "license": "MIT"
+-    },
+     "node_modules/natural-compare": {
+       "version": "1.4.0",
+       "resolved": "https://registry.npmjs.org/natural-compare/-/natural-compare-1.4.0.tgz",
+@@ -14140,16 +14141,17 @@
+       "dev": true
+     },
+     "node_modules/prebuild-install": {
+-      "version": "7.1.2",
+-      "resolved": "https://registry.npmjs.org/prebuild-install/-/prebuild-install-7.1.2.tgz",
+-      "integrity": "sha512-UnNke3IQb6sgarcZIDU3gbMeTp/9SSU1DAIkil7PrqG1vZlBtY5msYccSKSHDqa3hNg436IXK+SNImReuA1wEQ==",
++      "version": "7.1.3",
++      "resolved": "https://registry.npmjs.org/prebuild-install/-/prebuild-install-7.1.3.tgz",
++      "integrity": "sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==",
++      "license": "MIT",
+       "dependencies": {
+         "detect-libc": "^2.0.0",
+         "expand-template": "^2.0.3",
+         "github-from-package": "0.0.0",
+         "minimist": "^1.2.3",
+         "mkdirp-classic": "^0.5.3",
+-        "napi-build-utils": "^1.0.1",
++        "napi-build-utils": "^2.0.0",
+         "node-abi": "^3.3.0",
+         "pump": "^3.0.0",
+         "rc": "^1.2.7",
 diff --git a/package.json b/package.json
-index b2a6703..3d03e9a 100644
+index 39b8e38..a3dec3c 100644
 --- a/package.json
 +++ b/package.json
-@@ -83,3 +83,3 @@
+@@ -81,7 +81,7 @@
+     "@vscode/deviceid": "^0.1.1",
+     "@vscode/iconv-lite-umd": "0.7.1",
      "@vscode/native-watchdog": "^1.4.6",
 -    "@vscode/policy-watcher": "^1.3.2",
 +    "@vscodium/policy-watcher": "^1.3.2-252465",
      "@vscode/proxy-agent": "^0.37.0",
+     "@vscode/ripgrep": "^1.15.13",
+     "@vscode/spdlog": "^0.15.7",
+@@ -109,7 +109,7 @@
+     "kerberos": "2.1.1",
+     "minimist": "^1.2.8",
+     "native-is-elevated": "0.9.0",
+-    "native-keymap": "^3.3.5",
++    "@vscodium/native-keymap": "3.3.7-258424",
+     "node-pty": "^1.2.0-beta.10",
+     "open": "^10.1.2",
+     "tas-client": "0.3.1",
 diff --git a/src/vs/base/test/node/uri.perf.data.txt b/src/vs/base/test/node/uri.perf.data.txt
 index ee0a24b..881ce36 100644
 --- a/src/vs/base/test/node/uri.perf.data.txt
 +++ b/src/vs/base/test/node/uri.perf.data.txt
-@@ -14698,48 +14698,48 @@
+@@ -14696,52 +14696,52 @@
+ /Users/example/node_modules/@vscode/node-addon-api/node_addon_api_except.target.mk
+ /Users/example/node_modules/@vscode/node-addon-api/node_addon_api.target.mk
  /Users/example/node_modules/@vscode/node-addon-api/node_addon_api.Makefile
 -/Users/example/node_modules/@vscode/policy-watcher/LICENSE
 -/Users/example/node_modules/@vscode/policy-watcher/binding.gyp
@@ -196,11 +327,32 @@ index ee0a24b..881ce36 100644
 +/Users/example/node_modules/@vscodium/policy-watcher/src/windows/StringPolicy.cc
 +/Users/example/node_modules/@vscodium/policy-watcher/src/windows/NumberPolicy.hh
  /Users/example/node_modules/@vscode/vscode-languagedetection/CODE_OF_CONDUCT.md
+ /Users/example/node_modules/@vscode/vscode-languagedetection/LICENSE
+ /Users/example/node_modules/@vscode/vscode-languagedetection/dist/lib/index.js
 diff --git a/src/vs/platform/environment/test/node/nativeModules.integrationTest.ts b/src/vs/platform/environment/test/node/nativeModules.integrationTest.ts
-index ca6cea2..32b22fe 100644
+index c30c6da..32b22fe 100644
 --- a/src/vs/platform/environment/test/node/nativeModules.integrationTest.ts
 +++ b/src/vs/platform/environment/test/node/nativeModules.integrationTest.ts
-@@ -62,5 +62,5 @@ flakySuite('Native Modules (all platforms)', () => {
+@@ -42,12 +42,12 @@ flakySuite('Native Modules (all platforms)', () => {
+ 	});
+ 
+ 	test('native-keymap', async () => {
+-		const keyMap = await import('native-keymap');
+-		assert.ok(typeof keyMap.onDidChangeKeyboardLayout === 'function', testErrorMessage('native-keymap'));
+-		assert.ok(typeof keyMap.getCurrentKeyboardLayout === 'function', testErrorMessage('native-keymap'));
++		const keyMap = await import('@vscodium/native-keymap');
++		assert.ok(typeof keyMap.onDidChangeKeyboardLayout === 'function', testErrorMessage('@vscodium/native-keymap'));
++		assert.ok(typeof keyMap.getCurrentKeyboardLayout === 'function', testErrorMessage('@vscodium/native-keymap'));
+ 
+ 		const result = keyMap.getCurrentKeyboardLayout();
+-		assert.ok(result, testErrorMessage('native-keymap'));
++		assert.ok(result, testErrorMessage('@vscodium/native-keymap'));
+ 	});
+ 
+ 	test('@vscode/native-watchdog', async () => {
+@@ -60,9 +60,9 @@ flakySuite('Native Modules (all platforms)', () => {
+ 		assert.ok(typeof prompt.exec === 'function', testErrorMessage('@vscode/sudo-prompt'));
+ 	});
  
 -	test('@vscode/policy-watcher', async () => {
 -		const watcher = await import('@vscode/policy-watcher');
@@ -209,22 +361,32 @@ index ca6cea2..32b22fe 100644
 +		const watcher = await import('@vscodium/policy-watcher');
 +		assert.ok(typeof watcher.createWatcher === 'function', testErrorMessage('@vscodium/policy-watcher'));
  	});
+ 
+ 	test('node-pty', async () => {
 diff --git a/src/vs/platform/policy/node/nativePolicyService.ts b/src/vs/platform/policy/node/nativePolicyService.ts
 index 5b08cd9..728d7bd 100644
 --- a/src/vs/platform/policy/node/nativePolicyService.ts
 +++ b/src/vs/platform/policy/node/nativePolicyService.ts
-@@ -8,3 +8,3 @@ import { IStringDictionary } from '../../../base/common/collections.js';
+@@ -6,7 +6,7 @@
+ import { AbstractPolicyService, IPolicyService, PolicyDefinition, PolicyValue } from '../common/policy.js';
+ import { IStringDictionary } from '../../../base/common/collections.js';
  import { Throttler } from '../../../base/common/async.js';
 -import type { PolicyUpdate, Watcher } from '@vscode/policy-watcher';
 +import type { PolicyUpdate, Watcher } from '@vscodium/policy-watcher';
  import { MutableDisposable } from '../../../base/common/lifecycle.js';
-@@ -27,3 +27,3 @@ export class NativePolicyService extends AbstractPolicyService implements IPolic
+ import { ILogService } from '../../log/common/log.js';
+ 
+@@ -25,11 +25,11 @@ export class NativePolicyService extends AbstractPolicyService implements IPolic
+ 	protected async _updatePolicyDefinitions(policyDefinitions: IStringDictionary<PolicyDefinition>): Promise<void> {
+ 		this.logService.trace(`NativePolicyService#_updatePolicyDefinitions - Found ${Object.keys(policyDefinitions).length} policy definitions`);
  
 -		const { createWatcher } = await import('@vscode/policy-watcher');
 +		const { createWatcher } = await import('@vscodium/policy-watcher');
  
-@@ -31,3 +31,3 @@ export class NativePolicyService extends AbstractPolicyService implements IPolic
+ 		await this.throttler.queue(() => new Promise<void>((c, e) => {
  			try {
 -				this.watcher.value = createWatcher(this.productName, policyDefinitions, update => {
 +				this.watcher.value = createWatcher('VSCodium', this.productName, policyDefinitions, update => {
  					this._onDidPolicyChange(update);
+ 					c();
+ 				});

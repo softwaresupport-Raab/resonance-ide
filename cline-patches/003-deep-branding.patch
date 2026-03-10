@@ -1,0 +1,254 @@
+diff --git a/src/registry.ts b/src/registry.ts
+index 81e6920..03e0b92 100644
+--- a/src/registry.ts
++++ b/src/registry.ts
+@@ -1,6 +1,6 @@
+ import { name, publisher, version } from "../package.json"
+ 
+-const prefix = name === "claude-dev" ? "cline" : name
++const prefix = name === "claude-dev" || name === "resonance" ? "cline" : name
+ 
+ /**
+  * List of commands with the name of the extension they are registered under.
+diff --git a/src/shared/cline/banner.ts b/src/shared/cline/banner.ts
+index 717aeec..50684e1 100644
+--- a/src/shared/cline/banner.ts
++++ b/src/shared/cline/banner.ts
+@@ -85,9 +85,9 @@ export const BANNER_DATA: BannerCardData[] = [
+ 	{
+ 		id: "chatgpt-integration-v1",
+ 		icon: "megaphone",
+-		title: "Use ChatGPT with Cline",
++		title: "Use ChatGPT with Resonance",
+ 		description:
+-			"Bring your ChatGPT subscription to Cline! Use your existing plan directly with no per token costs or API keys to manage.",
++			"Bring your ChatGPT subscription to Resonance! Use your existing plan directly with no per token costs or API keys to manage.",
+ 		actions: [
+ 			{
+ 				title: "Connect",
+@@ -110,7 +110,7 @@ export const BANNER_DATA: BannerCardData[] = [
+ 	{
+ 		id: "cli-info-windows-v1",
+ 		icon: "terminal",
+-		title: "Cline CLI Info",
++		title: "Resonance CLI Info",
+ 		platforms: ["windows"] satisfies BannerCardData["platforms"],
+ 		description:
+ 			"Available for macOS and Linux. Coming soon to other platforms. [Learn more](https://docs.cline.bot/cline-cli/overview)",
+@@ -120,8 +120,8 @@ export const BANNER_DATA: BannerCardData[] = [
+ 	{
+ 		id: "info-banner-v1",
+ 		icon: "lightbulb",
+-		title: "Use Cline in Right Sidebar",
++		title: "Use Resonance in Right Sidebar",
+ 		description:
+-			"For the best experience, drag the Cline icon to your right sidebar. This keeps your file explorer and editor visible while you chat with Cline, making it easier to navigate your codebase and see changes in real-time. [See how →](https://docs.cline.bot/features/customization/opening-cline-in-sidebar)",
++			"For the best experience, drag the Resonance icon to your right sidebar. This keeps your file explorer and editor visible while you chat with Resonance, making it easier to navigate your project and see changes in real-time.",
+ 	},
+ ]
+diff --git a/webview-ui/src/components/chat/BrowserSessionRow.tsx b/webview-ui/src/components/chat/BrowserSessionRow.tsx
+index 2a449cf..4df6439 100644
+--- a/webview-ui/src/components/chat/BrowserSessionRow.tsx
++++ b/webview-ui/src/components/chat/BrowserSessionRow.tsx
+@@ -360,7 +360,7 @@ const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
+ 					<span className="codicon codicon-inspect" style={browserIconStyle}></span>
+ 				)}
+ 				<span style={approveTextStyle}>
+-					{isAutoApproved ? "Cline is using the browser:" : "Cline wants to use the browser:"}
++					{isAutoApproved ? "Resonance is using the browser:" : "Resonance wants to use the browser:"}
+ 				</span>
+ 			</div>
+ 			<div
+diff --git a/webview-ui/src/components/chat/ChatRow.tsx b/webview-ui/src/components/chat/ChatRow.tsx
+index 03d3045..0b37990 100644
+--- a/webview-ui/src/components/chat/ChatRow.tsx
++++ b/webview-ui/src/components/chat/ChatRow.tsx
+@@ -317,12 +317,12 @@ export const ChatRowContent = memo(
+ 				case "mistake_limit_reached":
+ 					return [
+ 						<CircleXIcon className="text-error size-2" />,
+-						<span className="text-error font-bold">Cline is having trouble...</span>,
++						<span className="text-error font-bold">Resonance is having trouble...</span>,
+ 					]
+ 				case "command":
+ 					return [
+ 						<TerminalIcon className="text-foreground size-2" />,
+-						<span className="font-bold text-foreground">Cline wants to execute this command:</span>,
++						<span className="font-bold text-foreground">Resonance wants to execute this command:</span>,
+ 					]
+ 				case "use_mcp_server":
+ 					const mcpServerUse = JSON.parse(message.text || "{}") as ClineAskUseMcpServer
+@@ -333,7 +333,7 @@ export const ChatRowContent = memo(
+ 							<span className="codicon codicon-server text-foreground mb-[-1.5px]" />
+ 						),
+ 						<span className="ph-no-capture font-bold text-foreground break-words">
+-							Cline wants to {mcpServerUse.type === "use_mcp_tool" ? "use a tool" : "access a resource"} on the{" "}
++							Resonance wants to {mcpServerUse.type === "use_mcp_tool" ? "use a tool" : "access a resource"} on the{" "}
+ 							<code className="break-all">
+ 								{getMcpServerDisplayName(mcpServerUse.serverName, mcpMarketplaceCatalog)}
+ 							</code>{" "}
+@@ -352,7 +352,7 @@ export const ChatRowContent = memo(
+ 				case "followup":
+ 					return [
+ 						<span className="codicon codicon-question text-foreground mb-[-1.5px]" />,
+-						<span className="font-bold text-foreground">Cline has a question:</span>,
++						<span className="font-bold text-foreground">Resonance has a question:</span>,
+ 					]
+ 				default:
+ 					return [null, null]
+@@ -429,8 +429,8 @@ export const ChatRowContent = memo(
+ 					const content = tool?.content || ""
+ 					const isApplyingPatch = content?.startsWith("%%bash") && !content.endsWith("*** End Patch\nEOF")
+ 					const editToolTitle = isApplyingPatch
+-						? "Cline is creating patches to edit this file:"
+-						: "Cline wants to edit this file:"
++						? "Resonance is creating patches to edit this file:"
++						: "Resonance wants to edit this file:"
+ 					return (
+ 						<div>
+ 							<div className={HEADER_CLASSNAMES}>
+@@ -464,7 +464,7 @@ export const ChatRowContent = memo(
+ 								<SquareMinusIcon className="size-2" />
+ 								{tool.operationIsLocatedInWorkspace === false &&
+ 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
+-								<span style={{ fontWeight: "bold" }}>Cline wants to delete this file:</span>
++								<span style={{ fontWeight: "bold" }}>Resonance wants to delete this file:</span>
+ 							</div>
+ 							<CodeAccordian
+ 								// isLoading={message.partial}
+@@ -482,7 +482,7 @@ export const ChatRowContent = memo(
+ 								<FilePlus2Icon className="size-2" />
+ 								{tool.operationIsLocatedInWorkspace === false &&
+ 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
+-								<span className="font-bold">Cline wants to create a new file:</span>
++								<span className="font-bold">Resonance wants to create a new file:</span>
+ 							</div>
+ 							{backgroundEditEnabled && tool.path && tool.content ? (
+ 								<DiffEditRow patch={tool.content} path={tool.path} startLineNumbers={tool.startLineNumbers} />
+@@ -505,7 +505,7 @@ export const ChatRowContent = memo(
+ 								{isImage ? <ImageUpIcon className="size-2" /> : <FileCode2Icon className="size-2" />}
+ 								{tool.operationIsLocatedInWorkspace === false &&
+ 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
+-								<span className="font-bold">Cline wants to read this file:</span>
++								<span className="font-bold">Resonance wants to read this file:</span>
+ 							</div>
+ 							<div className="bg-code rounded-sm overflow-hidden border border-editor-group-border">
+ 								<div
+@@ -539,8 +539,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
+ 								<span style={{ fontWeight: "bold" }}>
+ 									{message.type === "ask"
+-										? "Cline wants to view the top level files in this directory:"
+-										: "Cline viewed the top level files in this directory:"}
++										? "Resonance wants to view the top level files in this directory:"
++										: "Resonance viewed the top level files in this directory:"}
+ 								</span>
+ 							</div>
+ 							<CodeAccordian
+@@ -561,8 +561,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
+ 								<span style={{ fontWeight: "bold" }}>
+ 									{message.type === "ask"
+-										? "Cline wants to recursively view all files in this directory:"
+-										: "Cline recursively viewed all files in this directory:"}
++										? "Resonance wants to recursively view all files in this directory:"
++										: "Resonance recursively viewed all files in this directory:"}
+ 								</span>
+ 							</div>
+ 							<CodeAccordian
+@@ -583,8 +583,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
+ 								<span style={{ fontWeight: "bold" }}>
+ 									{message.type === "ask"
+-										? "Cline wants to view source code definition names used in this directory:"
+-										: "Cline viewed source code definition names used in this directory:"}
++										? "Resonance wants to view source code definition names used in this directory:"
++										: "Resonance viewed source code definition names used in this directory:"}
+ 								</span>
+ 							</div>
+ 							<CodeAccordian
+@@ -603,7 +603,7 @@ export const ChatRowContent = memo(
+ 								{tool.operationIsLocatedInWorkspace === false &&
+ 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
+ 								<span className="font-bold">
+-									Cline wants to search this directory for <code className="break-all">{tool.regex}</code>:
++									Resonance wants to search this directory for <code className="break-all">{tool.regex}</code>:
+ 								</span>
+ 							</div>
+ 							<SearchResultsDisplay
+@@ -620,7 +620,7 @@ export const ChatRowContent = memo(
+ 						<div>
+ 							<div className={HEADER_CLASSNAMES}>
+ 								<FoldVerticalIcon className="size-2" />
+-								<span className="font-bold">Cline is condensing the conversation:</span>
++								<span className="font-bold">Resonance is condensing the conversation:</span>
+ 							</div>
+ 							<div className="bg-code overflow-hidden border border-editor-group-border rounded-[3px]">
+ 								<div
+@@ -665,8 +665,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This URL is external")}
+ 								<span className="font-bold">
+ 									{message.type === "ask"
+-										? "Cline wants to fetch content from this URL:"
+-										: "Cline fetched content from this URL:"}
++										? "Resonance wants to fetch content from this URL:"
++										: "Resonance fetched content from this URL:"}
+ 								</span>
+ 							</div>
+ 							<div
+@@ -694,8 +694,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This search is external")}
+ 								<span className="font-bold">
+ 									{message.type === "ask"
+-										? "Cline wants to search the web for:"
+-										: "Cline searched the web for:"}
++										? "Resonance wants to search the web for:"
++										: "Resonance searched the web for:"}
+ 								</span>
+ 							</div>
+ 							<div className="bg-code border border-editor-group-border overflow-hidden rounded-xs select-text py-[9px] px-2.5">
+@@ -710,7 +710,7 @@ export const ChatRowContent = memo(
+ 						<div>
+ 							<div className={HEADER_CLASSNAMES}>
+ 								<LightbulbIcon className="size-2" />
+-								<span className="font-bold">Cline loaded the skill:</span>
++								<span className="font-bold">Resonance loaded the skill:</span>
+ 							</div>
+ 							<div className="bg-code border border-editor-group-border overflow-hidden rounded-xs py-[9px] px-2.5">
+ 								<span className="ph-no-capture font-medium">{tool.path}</span>
+@@ -1021,7 +1021,7 @@ export const ChatRowContent = memo(
+ 									<span className="font-medium text-foreground">Shell Integration Unavailable</span>
+ 								</div>
+ 								<div className="text-foreground opacity-80">
+-									Cline may have trouble viewing the command's output. Please update VSCode (
++									Resonance may have trouble viewing the command's output. Please update the IDE (
+ 									<code>CMD/CTRL + Shift + P</code> → "Update") and make sure you're using a supported shell:
+ 									zsh, bash, fish, or PowerShell (<code>CMD/CTRL + Shift + P</code> → "Terminal: Select Default
+ 									Profile").
+@@ -1217,7 +1217,7 @@ export const ChatRowContent = memo(
+ 							<div>
+ 								<div className={HEADER_CLASSNAMES}>
+ 									<FilePlus2Icon className="size-2" />
+-									<span className="text-foreground font-bold">Cline wants to start a new task:</span>
++									<span className="text-foreground font-bold">Resonance wants to start a new task:</span>
+ 								</div>
+ 								<NewTaskPreview context={message.text || ""} />
+ 							</div>
+@@ -1227,7 +1227,7 @@ export const ChatRowContent = memo(
+ 							<div>
+ 								<div className={HEADER_CLASSNAMES}>
+ 									<FilePlus2Icon className="size-2" />
+-									<span className="text-foreground font-bold">Cline wants to condense your conversation:</span>
++									<span className="text-foreground font-bold">Resonance wants to condense your conversation:</span>
+ 								</div>
+ 								<NewTaskPreview context={message.text || ""} />
+ 							</div>
+@@ -1237,7 +1237,7 @@ export const ChatRowContent = memo(
+ 							<div>
+ 								<div className={HEADER_CLASSNAMES}>
+ 									<FilePlus2Icon className="size-2" />
+-									<span className="text-foreground font-bold">Cline wants to create a Github issue:</span>
++									<span className="text-foreground font-bold">Resonance wants to create a Github issue:</span>
+ 								</div>
+ 								<ReportBugPreview data={message.text || ""} />
+ 							</div>

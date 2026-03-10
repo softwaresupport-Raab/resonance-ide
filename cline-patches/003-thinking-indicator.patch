@@ -1,0 +1,163 @@
+diff --git a/webview-ui/src/components/chat/ChatView.tsx b/webview-ui/src/components/chat/ChatView.tsx
+index e57b18d..6a8bd26 100644
+--- a/webview-ui/src/components/chat/ChatView.tsx
++++ b/webview-ui/src/components/chat/ChatView.tsx
+@@ -68,6 +68,15 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
+ 	// has to be after api_req_finished are all reduced into api_req_started messages
+ 	const apiMetrics = useMemo(() => getApiMetrics(modifiedMessages), [modifiedMessages])
+ 
++	// True during the pre-token gap: from user send until api_req_started arrives.
++	// Used to lock model/plan-act buttons so users can't change config mid-request.
++	const isWaitingForResponse = useMemo(() => {
++		const lastMsg = modifiedMessages[modifiedMessages.length - 1]
++		if (!lastMsg) return true
++		if (lastMsg.say === "user_feedback" || lastMsg.say === "user_feedback_diff") return true
++		return false
++	}, [modifiedMessages])
++
+ 	const lastApiReqTotalTokens = useMemo(() => getLastApiReqTotalTokens(modifiedMessages) || undefined, [modifiedMessages])
+ 
+ 	// Use custom hooks for state management
+@@ -374,6 +383,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
+ 				/>
+ 				<InputSection
+ 					chatState={chatState}
++					isProcessing={isWaitingForResponse}
+ 					messageHandlers={messageHandlers}
+ 					placeholderText={placeholderText}
+ 					scrollBehavior={scrollBehavior}
+diff --git a/webview-ui/src/components/chat/chat-view/components/layout/InputSection.tsx b/webview-ui/src/components/chat/chat-view/components/layout/InputSection.tsx
+index f3e5cc4..dfccba2 100644
+--- a/webview-ui/src/components/chat/chat-view/components/layout/InputSection.tsx
++++ b/webview-ui/src/components/chat/chat-view/components/layout/InputSection.tsx
+@@ -5,6 +5,7 @@ import { ChatState, MessageHandlers, ScrollBehavior } from "../../types/chatType
+ 
+ interface InputSectionProps {
+ 	chatState: ChatState
++	isProcessing: boolean
+ 	messageHandlers: MessageHandlers
+ 	scrollBehavior: ScrollBehavior
+ 	placeholderText: string
+@@ -17,6 +18,7 @@ interface InputSectionProps {
+  */
+ export const InputSection: React.FC<InputSectionProps> = ({
+ 	chatState,
++	isProcessing,
+ 	messageHandlers,
+ 	scrollBehavior,
+ 	placeholderText,
+@@ -29,7 +31,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
+ 		isTextAreaFocused,
+ 		inputValue,
+ 		setInputValue,
+-		sendingDisabled,
++		sendingDisabled: sendingDisabledFromState,
+ 		selectedImages,
+ 		setSelectedImages,
+ 		selectedFiles,
+@@ -38,6 +40,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
+ 		handleFocusChange,
+ 	} = chatState
+ 
++	const sendingDisabled = sendingDisabledFromState || isProcessing
+ 	const { isAtBottom, scrollToBottomAuto } = scrollBehavior
+ 
+ 	return (
+diff --git a/webview-ui/src/components/chat/chat-view/components/layout/MessagesArea.tsx b/webview-ui/src/components/chat/chat-view/components/layout/MessagesArea.tsx
+index c8040dc..ef4d798 100644
+--- a/webview-ui/src/components/chat/chat-view/components/layout/MessagesArea.tsx
++++ b/webview-ui/src/components/chat/chat-view/components/layout/MessagesArea.tsx
+@@ -6,6 +6,7 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
+ import { cn } from "@/lib/utils"
+ import { ChatState, MessageHandlers, ScrollBehavior } from "../../types/chatTypes"
+ import { createMessageRenderer } from "../messages/MessageRenderer"
++import { ThinkingIndicator } from "./ThinkingIndicator"
+ 
+ interface MessagesAreaProps {
+ 	task: ClineMessage
+@@ -60,6 +61,17 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
+ 
+ 	const { expandedRows, inputValue, setActiveQuote } = chatState
+ 
++	// Show ThinkingIndicator in the Footer only during the pre-api_req_started gap:
++	// from user send → backend receives request → api_req_started event arrives.
++	// Once api_req_started is present, RequestStartRow owns its own loading state
++	// (activities text, reasoning shimmer, etc.) — no duplication needed.
++	const isWaitingForResponse = useMemo(() => {
++		const lastMsg = modifiedMessages[modifiedMessages.length - 1]
++		if (!lastMsg) return true
++		if (lastMsg.say === "user_feedback" || lastMsg.say === "user_feedback_diff") return true
++		return false
++	}, [modifiedMessages])
++
+ 	const itemContent = useCallback(
+ 		createMessageRenderer(
+ 			groupedMessages,
+@@ -110,7 +122,7 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
+ 					atBottomThreshold={10} // trick to make sure virtuoso re-renders when task changes, and we use initialTopMostItemIndex to start at the bottom
+ 					className="scrollable grow overflow-y-scroll"
+ 					components={{
+-						Footer: () => <div className="min-h-1" />, // Add empty padding at the bottom
++						Footer: () => isWaitingForResponse ? <ThinkingIndicator /> : <div className="min-h-1" />,
+ 					}}
+ 					data={groupedMessages}
+ 					// increasing top by 3_000 to prevent jumping around when user collapses a row
+diff --git a/webview-ui/src/theme.css b/webview-ui/src/theme.css
+index 7de5d94..eb099d2 100644
+--- a/webview-ui/src/theme.css
++++ b/webview-ui/src/theme.css
+@@ -149,6 +149,32 @@
+ 			transform: translateY(0);
+ 		}
+ 	}
++
++	--animate-dot-bounce: dotBounce 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
++	@keyframes dotBounce {
++		0%,
++		80%,
++		100% {
++			transform: scale(0.6);
++			opacity: 0.4;
++		}
++		40% {
++			transform: scale(1);
++			opacity: 1;
++		}
++	}
++
++	--animate-thinking-in: thinkingIn 0.12s cubic-bezier(0.34, 1.56, 0.64, 1) both;
++	@keyframes thinkingIn {
++		from {
++			opacity: 0;
++			transform: translateY(8px);
++		}
++		to {
++			opacity: 1;
++			transform: translateY(0);
++		}
++	}
+ }
+ 
+ @theme inline {
+@@ -359,3 +385,21 @@
+ 		}
+ 	}
+ }
++
++/* ─── Accessibility: Reduced Motion ──────────────────────────────────────────
++   Respects the OS "Reduce Motion" accessibility setting (WCAG 2.1 §2.3.3).
++   Collapses all animation/transition durations to a single frame so content
++   still appears (opacity changes) but no movement or looping occurs.
++   Covers Tailwind utilities (animate-spin, animate-pulse, animate-shimmer, etc.)
++   as well as all custom keyframes defined above.
++─────────────────────────────────────────────────────────────────────────────── */
++@media (prefers-reduced-motion: reduce) {
++	*,
++	*::before,
++	*::after {
++		animation-duration: 0.01ms !important;
++		animation-iteration-count: 1 !important;
++		transition-duration: 0.01ms !important;
++		scroll-behavior: auto !important;
++	}
++}

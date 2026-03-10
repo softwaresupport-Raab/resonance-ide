@@ -1,0 +1,54 @@
+diff --git a/src/vs/workbench/browser/parts/globalCompositeBar.ts b/src/vs/workbench/browser/parts/globalCompositeBar.ts
+index 48220d6..145c475 100644
+--- a/src/vs/workbench/browser/parts/globalCompositeBar.ts
++++ b/src/vs/workbench/browser/parts/globalCompositeBar.ts
+@@ -742,9 +742,9 @@ function simpleActivityContextMenuActions(storageService: IStorageService, isAcc
+ }
+ 
+ export function isAccountsActionVisible(storageService: IStorageService): boolean {
+-	return storageService.getBoolean(AccountsActivityActionViewItem.ACCOUNTS_VISIBILITY_PREFERENCE_KEY, StorageScope.PROFILE, true);
++	return false;
+ }
+ 
+ function setAccountsActionVisible(storageService: IStorageService, visible: boolean) {
+-	storageService.store(AccountsActivityActionViewItem.ACCOUNTS_VISIBILITY_PREFERENCE_KEY, visible, StorageScope.PROFILE, StorageTarget.USER);
++	storageService.store(AccountsActivityActionViewItem.ACCOUNTS_VISIBILITY_PREFERENCE_KEY, false, StorageScope.PROFILE, StorageTarget.USER);
+ }
+diff --git a/src/vs/workbench/contrib/outline/browser/outline.contribution.ts b/src/vs/workbench/contrib/outline/browser/outline.contribution.ts
+index bb8dd65..dcb7f7c 100644
+--- a/src/vs/workbench/contrib/outline/browser/outline.contribution.ts
++++ b/src/vs/workbench/contrib/outline/browser/outline.contribution.ts
+@@ -10,6 +10,7 @@ import { Registry } from '../../../../platform/registry/common/platform.js';
+ import { IConfigurationRegistry, Extensions as ConfigurationExtensions, ConfigurationScope } from '../../../../platform/configuration/common/configurationRegistry.js';
+ import { VIEW_CONTAINER } from '../../files/browser/explorerViewlet.js';
+ import { SyncDescriptor } from '../../../../platform/instantiation/common/descriptors.js';
++import { ContextKeyExpr } from '../../../../platform/contextkey/common/contextkey.js';
+ import { Codicon } from '../../../../base/common/codicons.js';
+ import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
+ import { OutlineConfigKeys } from '../../../services/outline/browser/outline.js';
+@@ -30,7 +31,8 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([{
+ 	ctorDescriptor: new SyncDescriptor(OutlinePane),
+ 	canToggleVisibility: true,
+ 	canMoveView: true,
+-	hideByDefault: false,
++	hideByDefault: true,
++	when: ContextKeyExpr.false(),
+ 	collapsed: true,
+ 	order: 2,
+ 	weight: 30,
+diff --git a/src/vs/workbench/contrib/timeline/browser/timeline.contribution.ts b/src/vs/workbench/contrib/timeline/browser/timeline.contribution.ts
+index acf3e73..81abe11 100644
+--- a/src/vs/workbench/contrib/timeline/browser/timeline.contribution.ts
++++ b/src/vs/workbench/contrib/timeline/browser/timeline.contribution.ts
+@@ -35,9 +35,9 @@ export class TimelinePaneDescriptor implements IViewDescriptor {
+ 	readonly weight = 30;
+ 	readonly collapsed = true;
+ 	readonly canToggleVisibility = true;
+-	readonly hideByDefault = false;
++	readonly hideByDefault = true;
+ 	readonly canMoveView = true;
+-	readonly when = TimelineHasProviderContext;
++	readonly when = ContextKeyExpr.false();
+ 
+ 	focusCommand = { id: 'timeline.focus' };
+ }

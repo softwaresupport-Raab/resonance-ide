@@ -1,0 +1,14 @@
+diff --git a/src/extension.ts b/src/extension.ts
+index b569cb4..b2eb880 100644
+--- a/src/extension.ts
++++ b/src/extension.ts
+@@ -112,6 +112,9 @@ export async function activate(context: vscode.ExtensionContext) {
+ 		}),
+ 	)
+ 
++	// Auto-reveal the Resonance sidebar view on startup
++	vscode.commands.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
++
+ 	// NOTE: Commands must be added to the internal registry before registering them with VSCode
+ 	const { commands } = ExtensionRegistryInfo
+ 

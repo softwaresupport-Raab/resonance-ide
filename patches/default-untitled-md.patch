@@ -1,0 +1,13 @@
+diff --git a/src/vs/workbench/contrib/files/browser/fileCommands.ts b/src/vs/workbench/contrib/files/browser/fileCommands.ts
+index c8fc8aa..c24c663 100644
+--- a/src/vs/workbench/contrib/files/browser/fileCommands.ts
++++ b/src/vs/workbench/contrib/files/browser/fileCommands.ts
+@@ -708,7 +708,7 @@ CommandsRegistry.registerCommand({
+ 		const fileService = accessor.get(IFileService);
+ 
+ 		const createFileLocalized = nls.localize('newFileCommand.saveLabel', "Create File");
+-		const defaultFileUri = joinPath(await dialogService.defaultFilePath(), args?.fileName ?? 'Untitled.txt');
++		const defaultFileUri = joinPath(await dialogService.defaultFilePath(), args?.fileName ?? 'Untitled.md');
+ 
+ 		const saveUri = await dialogService.showSaveDialog({ saveLabel: createFileLocalized, title: createFileLocalized, defaultUri: defaultFileUri });
+ 

@@ -1,0 +1,89 @@
+diff --git a/src/core/task/index.ts b/src/core/task/index.ts
+index 916a541..fb4c3e7 100644
+--- a/src/core/task/index.ts
++++ b/src/core/task/index.ts
+@@ -1735,31 +1735,44 @@ export class Task {
+ 			isSubagentsEnabledAndCliInstalled = subagentsEnabled && clineCliInstalled
+ 		}
+ 
+-		const { globalToggles, localToggles } = await refreshClineRulesToggles(this.controller, this.cwd)
+-		const { windsurfLocalToggles, cursorLocalToggles, agentsLocalToggles } = await refreshExternalRulesToggles(
+-			this.controller,
+-			this.cwd,
+-		)
++		const [
++			{ globalToggles, localToggles },
++			{ windsurfLocalToggles, cursorLocalToggles, agentsLocalToggles },
++			evaluationContext,
++			globalClineRulesFilePath,
++			allSkills,
++			openTabs,
++			visibleTabs,
++		] = await Promise.all([
++			refreshClineRulesToggles(this.controller, this.cwd),
++			refreshExternalRulesToggles(this.controller, this.cwd),
++			RuleContextBuilder.buildEvaluationContext({
++				cwd: this.cwd,
++				messageStateHandler: this.messageStateHandler,
++				workspaceManager: this.workspaceManager,
++			}),
++			ensureRulesDirectoryExists(),
++			discoverSkills(this.cwd),
++			HostProvider.window.getOpenTabs({}),
++			HostProvider.window.getVisibleTabs({}),
++		])
+ 
+-		const evaluationContext = await RuleContextBuilder.buildEvaluationContext({
+-			cwd: this.cwd,
+-			messageStateHandler: this.messageStateHandler,
+-			workspaceManager: this.workspaceManager,
+-		})
++		const [
++			globalRules,
++			localRules,
++			[localCursorRulesFileInstructions, localCursorRulesDirInstructions],
++			localWindsurfRulesFileInstructions,
++			localAgentsRulesFileInstructions,
++		] = await Promise.all([
++			getGlobalClineRules(globalClineRulesFilePath, globalToggles, { evaluationContext }),
++			getLocalClineRules(this.cwd, localToggles, { evaluationContext }),
++			getLocalCursorRules(this.cwd, cursorLocalToggles),
++			getLocalWindsurfRules(this.cwd, windsurfLocalToggles),
++			getLocalAgentsRules(this.cwd, agentsLocalToggles),
++		])
+ 
+-		const globalClineRulesFilePath = await ensureRulesDirectoryExists()
+-		const globalRules = await getGlobalClineRules(globalClineRulesFilePath, globalToggles, { evaluationContext })
+ 		const globalClineRulesFileInstructions = globalRules.instructions
+-
+-		const localRules = await getLocalClineRules(this.cwd, localToggles, { evaluationContext })
+ 		const localClineRulesFileInstructions = localRules.instructions
+-		const [localCursorRulesFileInstructions, localCursorRulesDirInstructions] = await getLocalCursorRules(
+-			this.cwd,
+-			cursorLocalToggles,
+-		)
+-		const localWindsurfRulesFileInstructions = await getLocalWindsurfRules(this.cwd, windsurfLocalToggles)
+-
+-		const localAgentsRulesFileInstructions = await getLocalAgentsRules(this.cwd, agentsLocalToggles)
+ 
+ 		const clineIgnoreContent = this.clineIgnoreController.clineIgnoreContent
+ 		let clineIgnoreInstructions: string | undefined
+@@ -1785,7 +1798,6 @@ export class Task {
+ 		})
+ 
+ 		// Discover and filter available skills
+-		const allSkills = await discoverSkills(this.cwd)
+ 		const resolvedSkills = getAvailableSkills(allSkills)
+ 
+ 		// Filter skills by toggle state (enabled by default)
+@@ -1799,8 +1811,8 @@ export class Task {
+ 
+ 		// Snapshot editor tabs so prompt tools can decide whether to include
+ 		// filetype-specific instructions (e.g. notebooks) without adding bespoke flags.
+-		const openTabPaths = (await HostProvider.window.getOpenTabs({})).paths || []
+-		const visibleTabPaths = (await HostProvider.window.getVisibleTabs({})).paths || []
++		const openTabPaths = openTabs?.paths ?? []
++		const visibleTabPaths = visibleTabs?.paths ?? []
+ 		const cap = 50
+ 		const editorTabs = {
+ 			open: openTabPaths.slice(0, cap),

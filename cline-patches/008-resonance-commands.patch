@@ -1,0 +1,657 @@
+diff --git a/src/core/prompts/commands.ts b/src/core/prompts/commands.ts
+index 674ac19..b043836 100644
+--- a/src/core/prompts/commands.ts
++++ b/src/core/prompts/commands.ts
+@@ -235,95 +235,450 @@ cline "<prompt>"
+ </explicit_instructions>\n
+ `
+ 
+-export const explainChangesToolResponse = () =>
+-	`<explicit_instructions type="explain_changes">
+-The user has asked you to explain code changes. You have access to a tool called **generate_explanation** that opens a multi-file diff view with AI-generated inline comments explaining code changes between two git references.
++/**
++ * Generates the deep-planning slash command response with model-family-aware variant selection
++ * @param focusChainSettings Optional focus chain settings to include in the prompt
++ * @param providerInfo Optional API provider info for model family detection
++ * @param enableNativeToolCalls Optional flag to determine if native tool calling is enabled
++ * @returns The deep-planning prompt string with appropriate variant and focus chain settings applied
++ */
++export const deepPlanningToolResponse = (
++	focusChainSettings?: { enabled: boolean },
++	providerInfo?: ApiProviderInfo,
++	enableNativeToolCalls?: boolean,
++) => {
++	return getDeepPlanningPrompt(focusChainSettings, providerInfo, enableNativeToolCalls)
++}
++
++export const setupToolResponse = () =>
++	`<explicit_instructions type="setup">
++# Resonance Setup
++This skill sets up the Resonance Persistent Memory System when it does not yet exist.
++
++## When to use
++- When \`.resonance/01_state.md\` does not exist
++- When the user explicitly invokes \`/setup\`
++- On the very first chat in a new workspace
++
++## Steps
++
++### Step 1: Welcome
++Greet the user warmly:
++"Welcome to Resonance! 👋
++I'm your personal assistant for everything you want to organize — whether it's work projects, everyday tasks, or creative endeavors.
++To help me remember what we're working on across chat sessions, I'll quickly set up my memory system. This will only take a minute."
++
++### Step 2: Understand the user's goal
++Ask the user what they want to organize:
++<ask_followup_question>
++<question>What would you like to organize with Resonance?</question>
++<options>["💼 Work Project — e.g., product launch, client project, strategy", "🏠 Personal Project — e.g., moving, renovation, travel planning", "📋 Ongoing Tasks — e.g., weekly planning, to-dos, routines", "💻 Software Project — e.g., app, website, automation", "🤔 Not sure yet — set up first, topic comes later"]</options>
++</ask_followup_question>
++
++### Step 3: Create folder structure
++Create the following files based on the user's answer:
++
++**\`.resonance/01_state.md\`**:
++\`\`\`markdown
++# Current State
++
++## Last Sync
++**Date**: [today's date]
++**Session**: Initial setup
++
++---
++
++## Work Package 1: [Name based on user's answer]
++
++### Phase
++Kickoff
++
++### Goal
++[Based on what the user described]
++
++### Context
++- Resonance Framework initialized
++- First chat started
++
++### Next Session
++- [First meaningful task based on the project]
++\`\`\`
++
++**\`.resonance/02_memory.md\`**:
++\`\`\`markdown
++# Memory — Lessons Learned
++
++## [today's date] - Resonance Setup
++**Setup**: Framework initialized
++**Project type**: [What the user chose]
++\`\`\`
++
++**\`.resonance/00_soul.md\`** — Only create if the user described a concrete project:
++\`\`\`markdown
++# Soul — Vision & North Star
++
++## Project
++**Name**: [Project name]
++**Goal**: [One sentence]
++**For whom**: [Target audience / users]
++\`\`\`
++
++**\`docs/\`** — Create the directory. Tell the user that finished documents will be stored here.
++
++### Step 4: Confirmation
++Confirm to the user:
++"Done! 🎉 Your Resonance memory system is set up:
++- 📄 **\`.resonance/01_state.md\`** — This always shows what we're currently working on
++- 🧠 **\`.resonance/02_memory.md\`** — This is where I store important insights
++- 📁 **\`docs/\`** — This is where we store finished documents
++
++From now on, I'll automatically remember our progress. When you open a new chat, I'll know exactly where we left off.
++
++Should I get started with [first task from the work package]?"
+ 
+-# Important: Use Non-Interactive Commands
++## Important rules
++- Keep the setup short and friendly
++- Do NOT create empty template files — only files with real content
++- If the user picks "Not sure yet": Still create the basic structure, but use a generic work package called "First Steps"
++- Do NOT ask about technical details (programming language, framework) unless the user chose "Software Project"
++</explicit_instructions>\n
++`
++
++export const demoToolResponse = () =>
++	`<explicit_instructions type="demo">
++# Resonance Framework — Guided Demo
++
++Walk through a simulated first day with Resonance. Each step demonstrates a core capability: persistent memory, document creation, human-in-the-loop collaboration, AI-assisted editing, live API integration, and session continuity.
+ 
+-When running git or gh commands, always use non-interactive variants to ensure output is returned immediately without requiring user interaction:
++**Language Note**: All responses and interactions will automatically adapt to match the language the user is speaking. If the user communicates in German, respond in German. If in English, respond in English. Match the user's language throughout the entire demo.
+ 
+-- **For git commands**: Use \`git --no-pager\` prefix to disable the pager (e.g., \`git --no-pager log\`, \`git --no-pager diff\`, \`git --no-pager show\`)
+-- **For gh commands**: Use \`--json\` flag when possible for structured output, or pipe to \`cat\` if needed (e.g., \`gh pr diff 123 | cat\`)
++## Demo Context — Birthday Party Planning
+ 
+-This prevents commands from entering interactive/pager mode which would hang waiting for user input.
++This demo simulates a project that has been running for a few weeks. You will CREATE the .resonance/ files below to set the scene, then give the user a briefing as if these files were already there from previous sessions.
+ 
+-# Workflow
++### File: .resonance/01_state.md
++Create this file with the following content:
++\`\`\`markdown
++# Current State
+ 
+-Follow these steps to explain code changes:
++## Last Sync
++**Date**: [calculate: 20 days before today's date, format YYYY-MM-DD]
++**Session**: Party Planning — Location Research & Guest List Draft
+ 
+-## 1. Gather Information About the Changes
++## ⚠️ Overdue Items
++- **Invitations** (due [22 days before today], now overdue) — Need to send them this week, party is in 3 weeks!
+ 
+-First, use git or gh CLI tools to understand what changes exist. **Always get the full unified diff output**, not just stats:
++---
+ 
+-- For commits: \`git --no-pager show <commit>\` to see a specific commit's full diff
+-- For commit ranges: \`git --no-pager log --oneline <from>..<to>\` to see commits in range, then \`git --no-pager diff <from>..<to>\` for full diff
+-- For branches: \`git --no-pager diff <branch1>..<branch2>\` to see full diff of all changes
+-- For pull requests: \`gh pr view <number> --json commits,files\` for metadata, then \`gh pr diff <number> | cat\` for full diff
+-- For staged changes: \`git --no-pager diff --cached\` to see full diff of staged files
+-- For working directory: \`git --no-pager diff\` for full diff of unstaged changes
++## Work Package 1: Sarah's 30th Birthday Party
+ 
+-To get a comprehensive overview between two refs, run:
++### Phase
++Planning & Organization — Date set, location research ongoing, many details still open
+ 
+-**Bash:**
+-\`\`\`bash
+-echo "=== COMMITS ==="; git --no-pager log --oneline <from_ref>..<to_ref>; echo "=== CHANGED FILES ==="; git diff <from_ref>..<to_ref> --name-only; echo "=== FULL DIFF ==="; git --no-pager diff <from_ref>..<to_ref>
++### Goal
++Organize an unforgettable 30th birthday party for Sarah on Saturday, [10 weeks from today, pick the nearest Saturday] at 7:00 PM. Budget: ~€1,200 for 25 guests. Italian cuisine (Sarah's favorite), outdoor if possible, relaxed but stylish atmosphere.
++
++### Context
++- **Date confirmed**: Saturday, [same Saturday as above], 7:00 PM
++- **Guest count**: Approximately 25 people (close friends, college crew, work colleagues)
++- **Budget**: €1,200 total (€40-50 per person)
++- **Location research completed**: 3 options identified:
++  1. Osteria Bella Vista — Italian restaurant with garden (outdoor seating, €45/person)
++  2. Rooftop Lounge "Skybar" — Downtown, great view, cocktails (€50/person, indoor only)
++  3. Event space "Alte Fabrik" — Can rent for €300, bring own catering (most flexible)
++- **Catering preferences**: Italian cuisine — antipasti, pasta, tiramisu (Sarah's absolute favorite)
++- **Music**: Playlist with 90s hits + Sarah's favorite indie bands (Spotify playlist started)
++- **Decorations**: Balloons, fairy lights, photo wall with memories (Pinterest board created)
++
++### Next Session
++- Decide on location and book it (deadline: this week!)
++- Finalize guest list and send invitations
++- Order decorations online
++- Contact caterer if we choose event space option
+ \`\`\`
+ 
+-**PowerShell:**
+-\`\`\`powershell
+-'=== COMMITS ==='; git --no-pager log --oneline <from_ref>..<to_ref>; '=== CHANGED FILES ==='; git diff <from_ref>..<to_ref> --name-only; '=== FULL DIFF ==='; git --no-pager diff <from_ref>..<to_ref>
++### File: .resonance/02_memory.md
++Create this file with the following content:
++\`\`\`markdown
++# Memory — Lessons Learned
++
++## What We Know About Sarah
++
++### Food & Preferences
++- **Favorite cuisine**: Italian — especially pasta and tiramisu
++- **Drinks**: Loves Aperol Spritz and good red wine (Chianti)
++- **Dietary restrictions**: None, but several guests are vegetarian (need veggie options!)
++- **Atmosphere preference**: Relaxed but stylish — not too formal, but nice ambiance
++
++### Location Preferences
++- **Outdoor strongly preferred** — Sarah loves garden/terrace settings
++- **Accessibility**: Location should be reachable by public transport (not everyone has a car)
++- **Parking**: Nice to have, but not essential
++
++### Guest Insights
++- **College friends**: Will travel from Cologne — need to send save-the-date early!
++- **Work colleagues**: Mix of introverts and extroverts — music not too loud, areas for mingling and quiet chat
++- **Family**: Sarah's parents and sister confirmed — they'll help with setup
++
++## Planning Insights
++
++### Budget Learning
++- €40-50 per person is realistic for nice Italian catering
++- Renting event space (€300) + own catering might save money but adds coordination effort
++- Restaurant booking is simpler but less flexible for decorations
++
++### Timeline Insights
++- **Book location ASAP** — Popular places fill up fast in summer!
++- **Invitations should go out 3 weeks before** — We're already late!
++- **Decorations**: Order online now (delivery takes 5-7 days)
++- **Playlist**: Start early, get input from Sarah's sister (she knows all her favorite songs)
++
++## Decisions
++
++### Guest List Size
++- **Decision**: Keep it at ~25 people, not 40+
++- **Reason**: More intimate, better conversations, fits budget
++- **Result**: Focused on closest friends + family
++
++### Date & Time
++- **Decision**: Saturday evening at 7:00 PM
++- **Reason**: Weekend, early summer, evening allows for dinner + after-party
++- **Alternative rejected**: Friday evening (too rushed after work)
+ \`\`\`
+ 
+-Replace \`<from_ref>\` and \`<to_ref>\` with the appropriate git references (commit hashes, branch names, tags, HEAD~1, etc.).
++### File: .resonance/backlog/backlog.md
++Create this file with the following content:
++\`\`\`markdown
++# Backlog — Sarah's 30th Birthday Party
++
++## 🔴 High Priority (This Week!)
++
++### 📧 Send Invitations
++**Status**: 🔄 In Progress (OVERDUE!)
++**Details**: Digital invitations via WhatsApp group + formal invite for parents. Include RSVP deadline, date, time, dress code (smart casual), and mention vegetarian options available.
++
++### 📍 Book Location
++**Due**: This week!
++**Details**: Decide between Osteria Bella Vista, Skybar, or Alte Fabrik. Call to confirm availability for the party date, evening, ~25 people. Get deposit info and cancellation policy.
++
++---
++
++## 🟡 Medium Priority (Next 2 Weeks)
++
++### 🎈 Order Decorations
++**Details**:
++- Balloons (gold & white, helium tank?)
++- Fairy lights for outdoor/indoor atmosphere
++- Photo wall materials (string, clips, printed photos from college days)
++- Table decorations (candles, flowers?)
++- "Happy 30th Sarah" banner
++
++### 🍝 Finalize Menu with Caterer
++**Details**: If choosing Alte Fabrik, contact Italian caterer for quote. Menu ideas: Antipasti platter, choice of 2-3 pasta dishes (incl. vegetarian), tiramisu + panna cotta for dessert. Include drinks package (wine, Aperol Spritz, soft drinks).
++
++### 🎵 Create Music Playlist
++**Status**: ✅ Completed
++**Details**: Spotify playlist with 4-5 hours of music. Mix of 90s hits, Sarah's indie favorites, and upbeat party songs. Got song suggestions from Sarah's sister.
++
++---
++
++## 🟢 Low Priority (Nice to Have)
++
++### 🎮 Plan Games/Activities
++**Ideas**:
++- Photo slideshow with baby/college pictures (needs laptop + projector?)
++- "Guess the year" game with photos
++- Speech/toast time slot (who wants to say something?)
++- Dance floor area setup
++
++### 🎁 Coordinate Gift Collection
++**Details**: Check with close friends if they want to chip in for group gift. Ideas: Weekend trip voucher, nice jewelry, professional photo session.
++
++### 📸 Book Photographer
++**Details**: Ask friend with good camera if they'd take photos, or hire semi-professional photographer for 2-3 hours (~€150-200). Candid shots preferred over posed.
++\`\`\`
++
++---
++
++## Step 1: Choose your demo path
++
++<ask_followup_question>
++<question>What would you like to try?</question>
++<options>["🚀 Full Run-Through — All features in sequence", "💬 Briefing — Read and discuss project status", "📝 Documents — Create, edit, and store", "🌐 Live Data — Fetch real data from the internet"]</options>
++</ask_followup_question>
+ 
+-## 2. Build Context for Better Explanations
++If the user picks a specific path, skip to the relevant steps:
++- "Full Run-Through" → continue with Step 2
++- "Briefing" → go to Step 2, then skip to Step 7
++- "Documents" → go to Step 3
++- "Live Data" → go to Step 6
+ 
+-Before calling generate_explanation, gather context that will help produce more insightful explanations:
++Track which sections were actually executed during this run. In Step 7, only mark completed capabilities that were truly demonstrated.
+ 
+-- Read relevant files to understand the codebase structure
+-- Look at related code that the changes interact with
+-- Check for tests that might explain the intended behavior
+-- Review any related documentation or comments
+-- If needed, view file contents at different versions: \`git --no-pager show <ref>:<file>\`
++---
+ 
+-The more context you have in your conversation history, the better the explanations will be since generate_explanation uses the full conversation context when generating comments.
++## Step 2: Morning Briefing — Persistent Memory
+ 
+-## 3. Determine Git References
++Read the .resonance/ files you just created and give the user a morning briefing. This demonstrates that Resonance remembers context across sessions.
+ 
+-Identify the appropriate git references for the diff:
++Summarize what you found in a brief, friendly "Good Morning" standup format:
++- **Done last time**: What was completed last session
++- **🔴 Overdue items**: Call out overdue tasks (especially the invitations)
++- **Open tasks**: What else is still pending
++- **Key insights**: Any lessons from memory that are relevant today
++- **Recommendation**: Strongly recommend booking the location and sending invitations ASAP
+ 
+-- **from_ref**: The "before" state (commit hash, branch name, tag, HEAD~1, etc.)
+-- **to_ref**: The "after" state (optional - defaults to working directory if omitted)
++Keep it conversational. End with: "The invitations are overdue and the location needs to be booked this week. Should we tackle the invitations first?"
+ 
+-Examples of reference combinations:
+-- Last commit: from_ref="HEAD~1", to_ref="HEAD"
+-- Specific commit: from_ref="abc123^", to_ref="abc123"
+-- Branch comparison: from_ref="main", to_ref="feature-branch"
+-- Staged changes: from_ref="HEAD" (omit to_ref to compare to working directory with staged changes)
+-- PR changes: from_ref="main", to_ref="pr-branch-name"
++---
+ 
+-## 4. Call generate_explanation
++## Step 3: Create a Document — Invitation Draft
+ 
+-Use the generate_explanation tool with:
+-- **title**: A descriptive title for the diff view (e.g., "Changes in commit abc123", "PR #42: Add user authentication")
+-- **from_ref**: The git reference for the "before" state
+-- **to_ref**: The git reference for the "after" state (optional)
+-Below is the user's input describing what changes they want explained. If no input is provided, default to analyzing uncommitted changes in the working directory (may or may not be staged).
++Now we create a document from scratch. This demonstrates file creation with AI assistance.
++
++Say to the user: "Let's create a document to showcase this capability. I'll draft the party invitation."
++
++Create the file \`invitation_draft.md\` with:
++- **Event**: Sarah's 30th Birthday Party
++- **Date & Time**: The Saturday date from the state file, 7:00 PM
++- **Location**: Osteria Bella Vista (recommend the top choice from the research)
++- **What to expect**: Italian dinner, drinks, music, good vibes
++- **Dress code**: Smart casual
++- **RSVP**: By [2 weeks from today]
++- **Note about vegetarian options**
++
++Make it warm and personal — this is for friends and family, not a corporate event. Keep it under 30 lines.
++
++After creating the file, tell the user: "This is the first draft. In the next step, you can add your own touch."
++
++---
++
++## Step 4: Your Contribution — Human + AI Together
++
++This step demonstrates the human-in-the-loop workflow. The user adds their own content.
++
++<ask_followup_question>
++<question>Now it's your turn! What would you like to add to the invitation?</question>
++<options>["🎉 Personal Message — A few words from the heart for Sarah", "🗺️ Directions — How to get there (public transport, parking)", "🎁 Gift Info — Coordinate a group gift", "✍️ Something else — I'll write my own addition"]</options>
++</ask_followup_question>
++
++Based on the user's choice:
++- If they pick a predefined option, ask them to provide 2-3 bullet points of content for that section
++- If they pick "Something else", ask them what they want to add
++
++Then add their section to \`invitation_draft.md\`. Confirm: "Your section has been added. Now I'll show you how I can polish the whole thing."
++
++---
++
++## Step 5: AI-Assisted Editing & Comparison
++
++This step demonstrates AI-assisted editing. Resonance edits the document in-place — the user sees the diff directly in the editor (built-in diff view).
++
++Now improve \`invitation_draft.md\`:
++- Tighten the language — make it warmer and more inviting
++- Improve the formatting and flow
++- If the user's added section has rough edges, polish it while keeping their meaning intact
++- Add a small personal touch (e.g., a fun line about celebrating Sarah)
++
++Tell the user what you changed and why. Be specific: "I made X changes: ..."
++
++Point out to the user: "You can see the changes directly in the editor as a diff — you can accept or reject each change individually. This is the normal workflow with Resonance."
++
++After the user accepts the edits, save the final version to the docs folder with proper frontmatter:
++
++Create the file \`docs/invitation_sarah_30th.md\` with the improved content, adding YAML frontmatter at the top:
++
++\`\`\`yaml
++---
++summary: Party invitation for Sarah's 30th birthday — date, location, dress code, RSVP
++read_when:
++  - "Work on Sarah's birthday party"
++  - "Send invitations"
++last_updated: [today's date]
++---
++\`\`\`
++
++Then explain to the user:
++"Resonance saves finished documents in \`docs/\` — with a frontmatter header that describes what it's about and when to read it. The next time you open a chat about the party, Resonance automatically finds and reads this document. No knowledge is lost."
++
++---
++
++## Step 6: Fetching Live Data — API Integration
++
++This step shows that Resonance can pull live data from the internet — not just work with local files.
++
++First, briefly explain the terminal:
++"In a moment, a **Terminal** will open at the bottom — that's a command line where Resonance can execute commands. You don't need to type anything there; I'll do it for you. If it bothers you, you can close it anytime with the **X** in the top right corner of the terminal window."
++
++Then say:
++"I'll now show you how Resonance can fetch live data from the internet — for example, weather data, exchange rates, or information about a country. This works with any public or internal interface (API)."
++
++<ask_followup_question>
++<question>What live data should we fetch?</question>
++<options>["🌤️ Weather — Current weather for the party location", "💱 Exchange Rates — Current EUR rates", "🎓 Fun Fact — A random fact for the party", "🌍 Look up a Country — Info about a country"]</options>
++</ask_followup_question>
++
++Based on the choice, run the appropriate command:
++- Weather: Ask the user for a city (suggest the party city). Use Open-Meteo (free, no API key):
++  \`curl -s "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&current_weather=true"\` (default: Munich)
++  Look up the city's coordinates if they name a different city. Parse the JSON and present it as a human-readable weather report.
++- Exchange Rates:
++  \`curl -s "https://open.er-api.com/v6/latest/EUR"\`
++  Pick the 5 most relevant currencies (USD, GBP, CHF, JPY, PLN) and present them as a clean table.
++- Fun Fact:
++  \`curl -s "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en"\`
++  Present the fact and suggest how it could be used as an icebreaker at the party.
++- Look up a Country: Ask the user for a country name:
++  \`curl -s "https://restcountries.com/v3.1/name/{country}?fields=name,capital,population,currencies,languages,flag"\`
++  Present the data as a structured profile.
++
++Present the results in a clear, non-technical way. No raw JSON — always interpret and format the data as a short, readable summary.
++
++After presenting the results, say:
++"That was real live data from the internet. Resonance can connect to any interface — public or internal — and integrate the results directly into your workflow."
++
++---
++
++## Step 7: End of Day — Session Continuity
++
++This is the final step. Demonstrate how Resonance saves context for the next session.
++
++Say: "To wrap up, I'll show you how Resonance saves progress for the next session."
++
++Read the current state file, then update \`.resonance/01_state.md\` by adding a section at the bottom:
++
++\`\`\`
++## Demo Session — [today's date]
++- ✅ [Only include items that were actually run in this session]
++- 💡 Next time: [suggest something relevant based on what happened]
++\`\`\`
++
++Important:
++- Do not claim steps that were skipped.
++- If only one branch was run, write a short branch-specific closing summary.
++- If the full path was run, use the full recap.
++
++Then give a closing summary:
++
++"That was the demo! Here's what you saw:
++
++1. **Memory** — I read the project status and gave a briefing
++2. **Document Creation** — We created a party invitation from scratch
++3. **Collaboration** — You contributed your own section
++4. **Editing with Preview** — I improved the document — you could accept or reject each change individually
++5. **Knowledge Management** — The finished document was stored in \`docs/\` to be automatically found in future chats
++6. **Live Data** — We fetched real data from the internet and presented it in an understandable way
++7. **Saving Progress** — Everything is saved — next time we chat, I'll know where we left off"
++
++End with:
++"**The demo is now complete.** 🎉
++
++To start with a real task, just open a **new chat** (+ icon at the top) and briefly describe what you want to work on — for example:
++
++- *'I need a concept for a client project'*
++- *'Help me structure a presentation'*
++- *'Summarize this document'*
++
++Resonance automatically remembers the context across all chats. Have fun!"
+ </explicit_instructions>\n
+ `
+-
+-/**
+- * Generates the deep-planning slash command response with model-family-aware variant selection
+- * @param focusChainSettings Optional focus chain settings to include in the prompt
+- * @param providerInfo Optional API provider info for model family detection
+- * @param enableNativeToolCalls Optional flag to determine if native tool calling is enabled
+- * @returns The deep-planning prompt string with appropriate variant and focus chain settings applied
+- */
+-export const deepPlanningToolResponse = (
+-	focusChainSettings?: { enabled: boolean },
+-	providerInfo?: ApiProviderInfo,
+-	enableNativeToolCalls?: boolean,
+-) => {
+-	return getDeepPlanningPrompt(focusChainSettings, providerInfo, enableNativeToolCalls)
+-}
+diff --git a/src/core/prompts/contextManagement.ts b/src/core/prompts/contextManagement.ts
+index 0f0369f..06ff831 100644
+--- a/src/core/prompts/contextManagement.ts
++++ b/src/core/prompts/contextManagement.ts
+@@ -114,5 +114,5 @@ This session is being continued from a previous conversation that ran out of con
+ ${summaryText}.
+ 
+ Please continue the conversation from where we left it off without asking the user any further questions. Continue with the last task that you were asked to work on. Pay special attention to the most recent user message when responding rather than the initial task message, if applicable.
+-If the most recent user's message starts with "/newtask", "/smol", "/compact", "/newrule", or "/reportbug", you should indicate to the user that they will need to run this command again.
++If the most recent user's message starts with "/setup", "/smol", "/compact", or "/demo", you should indicate to the user that they will need to run this command again.
+ `
+diff --git a/src/core/slash-commands/index.ts b/src/core/slash-commands/index.ts
+index 287cd3a..a4976bb 100644
+--- a/src/core/slash-commands/index.ts
++++ b/src/core/slash-commands/index.ts
+@@ -7,12 +7,8 @@ import { Logger } from "@/shared/services/Logger"
+ import { isNativeToolCallingConfig } from "@/utils/model-utils"
+ import {
+ 	condenseToolResponse,
+-	deepPlanningToolResponse,
+-	explainChangesToolResponse,
+-	newRuleToolResponse,
+-	newTaskToolResponse,
+-	reportBugToolResponse,
+-	subagentToolResponse,
++	demoToolResponse,
++	setupToolResponse,
+ } from "../prompts/commands"
+ import { StateManager } from "../storage/StateManager"
+ 
+@@ -51,28 +47,20 @@ export async function parseSlashCommands(
+ 	mcpPromptFetcher?: McpPromptFetcher,
+ ): Promise<{ processedText: string; needsClinerulesFileCheck: boolean }> {
+ 	const SUPPORTED_DEFAULT_COMMANDS = [
+-		"newtask",
++		"setup",
+ 		"smol",
+ 		"compact",
+-		"newrule",
+-		"reportbug",
+-		"deep-planning",
+-		"subagent",
+-		"explain-changes",
++		"demo",
+ 	]
+ 
+ 	// Determine if the current provider/model/setting actually uses native tool calling
+ 	const willUseNativeTools = isNativeToolCallingConfig(providerInfo!, enableNativeToolCalls || false)
+ 
+ 	const commandReplacements: Record<string, string> = {
+-		newtask: newTaskToolResponse(willUseNativeTools),
++		setup: setupToolResponse(),
+ 		smol: condenseToolResponse(focusChainSettings),
+ 		compact: condenseToolResponse(focusChainSettings),
+-		newrule: newRuleToolResponse(),
+-		reportbug: reportBugToolResponse(),
+-		"deep-planning": deepPlanningToolResponse(focusChainSettings, providerInfo, willUseNativeTools),
+-		subagent: subagentToolResponse(),
+-		"explain-changes": explainChangesToolResponse(),
++		demo: demoToolResponse(),
+ 	}
+ 
+ 	// Regex patterns to extract content from different XML tags
+diff --git a/src/shared/slashCommands.ts b/src/shared/slashCommands.ts
+index d937d74..2d03cf7 100644
+--- a/src/shared/slashCommands.ts
++++ b/src/shared/slashCommands.ts
+@@ -7,14 +7,8 @@ export interface SlashCommand {
+ 
+ export const BASE_SLASH_COMMANDS: SlashCommand[] = [
+ 	{
+-		name: "newtask",
+-		description: "Create a new task with context from the current task",
+-		section: "default",
+-		cliCompatible: true,
+-	},
+-	{
+-		name: "deep-planning",
+-		description: "Create a comprehensive implementation plan before coding",
++		name: "setup",
++		description: "Initialize the Resonance memory system for this project",
+ 		section: "default",
+ 		cliCompatible: true,
+ 	},
+@@ -25,32 +19,11 @@ export const BASE_SLASH_COMMANDS: SlashCommand[] = [
+ 		cliCompatible: true,
+ 	},
+ 	{
+-		name: "subagent",
+-		description: "Invoke a Cline CLI subagent for focused research tasks",
++		name: "demo",
++		description: "Start a guided demo of Resonance features",
+ 		section: "default",
+ 		cliCompatible: true,
+ 	},
+-	{
+-		name: "newrule",
+-		description: "Create a new Cline rule based on your conversation",
+-		section: "default",
+-		cliCompatible: true,
+-	},
+-	{
+-		name: "reportbug",
+-		description: "Create a Github issue with Cline",
+-		section: "default",
+-		cliCompatible: true,
+-	},
+-]
+-
+-// VS Code-only slash commands
+-export const VSCODE_ONLY_COMMANDS: SlashCommand[] = [
+-	{
+-		name: "explain-changes",
+-		description: "Explain code changes between git refs (PRs, commits, branches, etc.)",
+-		section: "default",
+-	},
+ ]
+ 
+ // CLI-only slash commands (handled locally, not sent to backend)
+diff --git a/webview-ui/src/utils/slash-commands.ts b/webview-ui/src/utils/slash-commands.ts
+index dd4f26f..3d92048 100644
+--- a/webview-ui/src/utils/slash-commands.ts
++++ b/webview-ui/src/utils/slash-commands.ts
+@@ -1,11 +1,9 @@
+ import type { McpServer } from "@shared/mcp"
+-import { PLATFORM_CONFIG, PlatformType } from "@/config/platform.config"
+-import { BASE_SLASH_COMMANDS, type SlashCommand, VSCODE_ONLY_COMMANDS } from "../../../src/shared/slashCommands.ts"
++import { BASE_SLASH_COMMANDS, type SlashCommand } from "../../../src/shared/slashCommands.ts"
+ 
+ export type { SlashCommand }
+ 
+-export const DEFAULT_SLASH_COMMANDS: SlashCommand[] =
+-	PLATFORM_CONFIG.type === PlatformType.VSCODE ? [...BASE_SLASH_COMMANDS, ...VSCODE_ONLY_COMMANDS] : BASE_SLASH_COMMANDS
++export const DEFAULT_SLASH_COMMANDS: SlashCommand[] = [...BASE_SLASH_COMMANDS]
+ 
+ export function getWorkflowCommands(
+ 	localWorkflowToggles: Record<string, boolean>,

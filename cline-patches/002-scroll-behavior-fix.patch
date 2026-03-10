@@ -1,0 +1,51 @@
+diff --git a/webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts b/webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts
+index b4e4f2b..71707fb 100644
+--- a/webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts
++++ b/webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts
+@@ -156,6 +156,21 @@ export function useScrollBehavior(
+ 		})
+ 	}, [])
+ 
++	// rAF-throttled instant scroll used during streaming height changes.
++	// Prevents competing smooth-scroll animations that cause visible jumping
++	// when providers like OpenAI stream tokens at high frequency.
++	const scrollRafRef = useRef<number | null>(null)
++	useEffect(() => () => {
++		if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current)
++	}, [])
++	const scheduleScrollToBottom = useCallback(() => {
++		if (scrollRafRef.current !== null) return
++		scrollRafRef.current = requestAnimationFrame(() => {
++			scrollRafRef.current = null
++			virtuosoRef.current?.scrollTo({ top: Number.MAX_SAFE_INTEGER, behavior: "auto" })
++		})
++	}, [])
++
+ 	const scrollToMessage = useCallback(
+ 		(messageIndex: number) => {
+ 			setPendingScrollToMessage(messageIndex)
+@@ -261,18 +276,15 @@ export function useScrollBehavior(
+ 	)
+ 
+ 	const handleRowHeightChange = useCallback(
+-		(isTaller: boolean) => {
++		(_isTaller: boolean) => {
+ 			if (!disableAutoScrollRef.current) {
+-				if (isTaller) {
+-					scrollToBottomSmooth()
+-				} else {
+-					setTimeout(() => {
+-						scrollToBottomAuto()
+-					}, 0)
+-				}
++				// Use rAF-throttled instant scroll for all streaming height changes.
++				// This prevents multiple competing smooth-scroll animations that cause
++				// visible jumping when fast providers like OpenAI stream token-by-token.
++				scheduleScrollToBottom()
+ 			}
+ 		},
+-		[scrollToBottomSmooth, scrollToBottomAuto],
++		[scheduleScrollToBottom],
+ 	)
+ 
+ 	useEffect(() => {

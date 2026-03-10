@@ -1,36 +1,70 @@
 diff --git a/build/lib/extensions.ts b/build/lib/extensions.ts
-index 24462a3..1daa855 100644
+index e06f151..5d2eebc 100644
 --- a/build/lib/extensions.ts
 +++ b/build/lib/extensions.ts
-@@ -33,4 +33,5 @@ const require = createRequire(import.meta.url);
+@@ -31,8 +31,9 @@ import { createRequire } from 'module';
+ const require = createRequire(import.meta.url);
+ 
  const root = path.dirname(path.dirname(import.meta.dirname));
 +const product = JSON.parse(fs.readFileSync(path.join(root, 'product.json'), 'utf8'));
  const commit = getVersion(root);
 -const sourceMappingURLBase = `https://main.vscode-cdn.net/sourcemaps/${commit}`;
 +const sourceMappingURLBase = `https://github.com/VSCodium/sourcemaps/releases/download/${product.quality}-${commit}`;
  
-@@ -181,3 +182,3 @@ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string,
- 							data.contents = Buffer.from(contents.replace(/\n\/\/# sourceMappingURL=(.*)$/gm, function (_m, g1) {
--								return `\n//# sourceMappingURL=${sourceMappingURLBase}/extensions/${path.basename(extensionPath)}/${relativeOutputPath}/${g1}`;
+ function minifyExtensionResources(input: Stream): Stream {
+ 	const jsonFilter = filter(['**/*.json', '**/*.code-snippets'], { restore: true });
+@@ -92,7 +93,7 @@ function fromLocal(extensionPath: string, forWeb: boolean, disableMangle: boolea
+ 
+ 
+ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string, disableMangle: boolean): Stream {
+-	const vsce = require('@vscode/vsce') as typeof import('@vscode/vsce');
++	const vsce = require('@vscodium/vsce') as typeof import('@vscodium/vsce');
+ 	const webpack = require('webpack');
+ 	const webpackGulp = require('webpack-stream');
+ 	const result = es.through();
+@@ -191,7 +192,7 @@ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string,
+ 							} else {
+ 								const contents = (data.contents as Buffer).toString('utf8');
+ 								data.contents = Buffer.from(contents.replace(/\n\/\/# sourceMappingURL=(.*)$/gm, function (_m, g1) {
+-									return `\n//# sourceMappingURL=${sourceMappingURLBase}/extensions/${path.basename(extensionPath)}/${relativeOutputPath}/${g1}`;
 +								return `\n//# sourceMappingURL=${sourceMappingURLBase}/extensions-${path.basename(extensionPath).replaceAll('/', '-')}-${relativeOutputPath.replaceAll('/', '-')}-${g1.replaceAll('/', '-')}`;
- 							}), 'utf8');
+ 								}), 'utf8');
+ 							}
+ 						}
+@@ -219,7 +220,7 @@ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string,
+ }
+ 
+ function fromLocalNormal(extensionPath: string): Stream {
+-	const vsce = require('@vscode/vsce') as typeof import('@vscode/vsce');
++	const vsce = require('@vscodium/vsce') as typeof import('@vscodium/vsce');
+ 	const result = es.through();
+ 
+ 	vsce.listFiles({ cwd: extensionPath, packageManager: vsce.PackageManager.Npm })
 diff --git a/build/lib/optimize.ts b/build/lib/optimize.ts
-index 58b8e07..f452614 100644
+index f5e812e..f9a4adc 100644
 --- a/build/lib/optimize.ts
 +++ b/build/lib/optimize.ts
-@@ -229,3 +229,3 @@ export function bundleTask(opts: IBundleTaskOpts): () => NodeJS.ReadWriteStream
+@@ -227,7 +227,7 @@ export function bundleTask(opts: IBundleTaskOpts): () => NodeJS.ReadWriteStream
+ }
+ 
  export function minifyTask(src: string, sourceMapBaseUrl?: string): (cb: any) => void {
 -	const sourceMappingURL = sourceMapBaseUrl ? ((f: any) => `${sourceMapBaseUrl}/${f.relative}.map`) : undefined;
 +	const sourceMappingURL = sourceMapBaseUrl ? ((f: any) => `${sourceMapBaseUrl}-${f.relative.replaceAll('/', '-')}.map`) : undefined;
  	const target = getBuildTarget();
+ 
+ 	return cb => {
 diff --git a/build/lib/util.ts b/build/lib/util.ts
-index f1354b8..dda8c37 100644
+index e4d01e1..ee0c4e4 100644
 --- a/build/lib/util.ts
 +++ b/build/lib/util.ts
-@@ -285,4 +285,4 @@ export function rewriteSourceMappingURL(sourceMappingURLBase: string): NodeJS.Re
+@@ -285,8 +285,8 @@ export function rewriteSourceMappingURL(sourceMappingURLBase: string): NodeJS.Re
+ 	const output = input
+ 		.pipe(es.mapSync<VinylFile, VinylFile>(f => {
  			const contents = (f.contents as Buffer).toString('utf8');
 -			const str = `//# sourceMappingURL=${sourceMappingURLBase}/${path.dirname(f.relative).replace(/\\/g, '/')}/$1`;
 -			f.contents = Buffer.from(contents.replace(/\n\/\/# sourceMappingURL=(.*)$/gm, str));
 +			const fp = path.dirname(f.relative).replace(/\\/g, '/').replaceAll('/', '-');
 +			f.contents = Buffer.from(contents.replace(/\n\/\/# sourceMappingURL=(.*)$/gm, (_m, p) => `//# sourceMappingURL=${sourceMappingURLBase}/${fp}-${p.replaceAll('/', '-')}`));
  			return f;
+ 		}));
+ 
