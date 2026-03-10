@@ -45,7 +45,7 @@ index b643e34..2f228ef 100644
 +}
 \ No newline at end of file
 diff --git a/src/main.ts b/src/main.ts
-index ecbbb16..36e5974 100644
+index 43218d9..3d1bb68 100644
 --- a/src/main.ts
 +++ b/src/main.ts
 @@ -6,6 +6,7 @@
@@ -106,10 +106,10 @@ index ab169bd..2155f5c 100644
  
  // fake export to make global work
 diff --git a/src/vs/platform/product/common/product.ts b/src/vs/platform/product/common/product.ts
-index 3af87ba..7ca4a36 100644
+index 3af87ba..9108464 100644
 --- a/src/vs/platform/product/common/product.ts
 +++ b/src/vs/platform/product/common/product.ts
-@@ -29,6 +29,42 @@ else if (globalThis._VSCODE_PRODUCT_JSON && globalThis._VSCODE_PACKAGE_JSON) {
+@@ -29,6 +29,29 @@ else if (globalThis._VSCODE_PRODUCT_JSON && globalThis._VSCODE_PACKAGE_JSON) {
  	// Obtain values from product.json and package.json-data
  	product = globalThis._VSCODE_PRODUCT_JSON as unknown as IProductConfiguration;
  
@@ -135,19 +135,6 @@ index 3af87ba..7ca4a36 100644
 +		product = merge(product, userProduct);
 +	} catch (ex) {
 +	}
-+
-+	const { serviceUrl, controlUrl, itemUrl, latestUrlTemplate, extensionUrlTemplate, resourceUrlTemplate } = product.extensionsGallery || {};
-+
-+	Object.assign(product, {
-+		extensionsGallery: {
-+			serviceUrl: env['VSCODE_GALLERY_SERVICE_URL'] || serviceUrl,
-+			controlUrl: env['VSCODE_GALLERY_CONTROL_URL'] || controlUrl,
-+			itemUrl: env['VSCODE_GALLERY_ITEM_URL'] || itemUrl,
-+			latestUrlTemplate: env['VSCODE_GALLERY_LATEST_URL_TEMPLATE'] || latestUrlTemplate,
-+			extensionUrlTemplate: env['VSCODE_GALLERY_EXTENSION_URL_TEMPLATE'] || extensionUrlTemplate,
-+			resourceUrlTemplate: env['VSCODE_GALLERY_RESOURCE_URL_TEMPLATE'] || resourceUrlTemplate,
-+		}
-+	});
 +
  	// Running out of sources
  	if (env['VSCODE_DEV']) {
