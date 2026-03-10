@@ -92,26 +92,6 @@ index ecbbb16..36e5974 100644
  
  	// Bootstrap ESM
  	await bootstrapESM();
-@@ -414,16 +430,16 @@ function createDefaultArgvConfigSync(argvConfigPath: string): void {
- 
- 		// Default argv content
- 		const defaultArgvConfigContent = [
--			'// This configuration file allows you to pass permanent command line arguments to VS Code.',
-+			'// This configuration file allows you to pass permanent command line arguments to !!APP_NAME!!.',
- 			'// Only a subset of arguments is currently supported to reduce the likelihood of breaking',
- 			'// the installation.',
- 			'//',
- 			'// PLEASE DO NOT CHANGE WITHOUT UNDERSTANDING THE IMPACT',
- 			'//',
--			'// NOTE: Changing this file requires a restart of VS Code.',
-+			'// NOTE: Changing this file requires a restart of !!APP_NAME!!.',
- 			'{',
- 			'	// Use software rendering instead of hardware accelerated rendering.',
--			'	// This can help in cases where you see rendering issues in VS Code.',
-+			'	// This can help in cases where you see rendering issues in !!APP_NAME!!.',
- 			'	// "disable-hardware-acceleration": true',
- 			'}'
- 		];
 diff --git a/src/typings/vscode-globals-product.d.ts b/src/typings/vscode-globals-product.d.ts
 index ab169bd..2155f5c 100644
 --- a/src/typings/vscode-globals-product.d.ts

@@ -129,6 +129,35 @@ flatpak run com.vscodium.codium
 
 Build instructions can be found [here](https://github.com/VSCodium/vscodium/blob/master/docs/howto-build.md)
 
+### Patch Stack Maintenance (Important for Forks)
+
+If your fork uses many patch files, CI can fail even when a patch appears to work locally.
+
+Reason:
+- Local testing is often done on a tree that already has prior patches applied.
+- CI starts from a clean upstream checkout and applies `patches/*.patch` in alphabetical order.
+- If a later patch contains hunks that overlap with an earlier patch, `git apply` may fail because context lines no longer match.
+
+Recommended workflow:
+- Keep patches focused: one concern per patch, avoid mixed branding + feature logic in one large patch.
+- Avoid duplicate hunks across patches touching the same file/region.
+- When a patch fails in CI, classify each failing hunk as duplicate, stale-context, or real conflict.
+- Regenerate stale-context patches from the correct intermediate state (after all earlier patches are applied).
+- Add a clean preflight simulation before pushing releases:
+
+```bash
+cd vscode
+git checkout <upstream-commit> -- .
+git clean -fd
+for p in ../patches/*.patch; do
+  cp "$p" /tmp/seq.patch
+  sed -i '' 's/!!APP_NAME!!/Resonance/g; s/!!RELEASE_VERSION!!/<version>/g; s/!!TUNNEL_APP_NAME!!/resonance-tunnel/g' /tmp/seq.patch
+  git apply --ignore-whitespace /tmp/seq.patch || exit 1
+done
+```
+
+This catches patch drift early and prevents expensive CI failures later.
+
 ## <a id="why"></a>Why Does This Exist
 
 This repository contains build files to generate free release binaries of Microsoft's Visual Studio Code. When we speak of "free software", we're talking about freedom, not price.

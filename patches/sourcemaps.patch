@@ -13,15 +13,6 @@ index e06f151..5d2eebc 100644
  
  function minifyExtensionResources(input: Stream): Stream {
  	const jsonFilter = filter(['**/*.json', '**/*.code-snippets'], { restore: true });
-@@ -92,7 +93,7 @@ function fromLocal(extensionPath: string, forWeb: boolean, disableMangle: boolea
- 
- 
- function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string, disableMangle: boolean): Stream {
--	const vsce = require('@vscode/vsce') as typeof import('@vscode/vsce');
-+	const vsce = require('@vscodium/vsce') as typeof import('@vscodium/vsce');
- 	const webpack = require('webpack');
- 	const webpackGulp = require('webpack-stream');
- 	const result = es.through();
 @@ -191,7 +192,7 @@ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string,
  							} else {
  								const contents = (data.contents as Buffer).toString('utf8');
@@ -31,15 +22,6 @@ index e06f151..5d2eebc 100644
  								}), 'utf8');
  							}
  						}
-@@ -219,7 +220,7 @@ function fromLocalWebpack(extensionPath: string, webpackConfigFileName: string,
- }
- 
- function fromLocalNormal(extensionPath: string): Stream {
--	const vsce = require('@vscode/vsce') as typeof import('@vscode/vsce');
-+	const vsce = require('@vscodium/vsce') as typeof import('@vscodium/vsce');
- 	const result = es.through();
- 
- 	vsce.listFiles({ cwd: extensionPath, packageManager: vsce.PackageManager.Npm })
 diff --git a/build/lib/optimize.ts b/build/lib/optimize.ts
 index f5e812e..f9a4adc 100644
 --- a/build/lib/optimize.ts
