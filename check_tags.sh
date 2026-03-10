@@ -55,8 +55,9 @@ else
       ASSETS="null"
     fi
   else
-    echo "can't check assets"
-    exit 1
+    echo "No existing release found — first build"
+    export SHOULD_BUILD="yes"
+    ASSETS="null"
   fi
 fi
 
