@@ -1,8 +1,8 @@
 diff --git a/webview-ui/src/components/chat/ChatView.tsx b/webview-ui/src/components/chat/ChatView.tsx
-index e57b18d..6a8bd26 100644
+index e57b18d..568cd97 100644
 --- a/webview-ui/src/components/chat/ChatView.tsx
 +++ b/webview-ui/src/components/chat/ChatView.tsx
-@@ -68,6 +68,15 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
+@@ -68,6 +68,16 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
  	// has to be after api_req_finished are all reduced into api_req_started messages
  	const apiMetrics = useMemo(() => getApiMetrics(modifiedMessages), [modifiedMessages])
  
@@ -10,7 +10,8 @@ index e57b18d..6a8bd26 100644
 +	// Used to lock model/plan-act buttons so users can't change config mid-request.
 +	const isWaitingForResponse = useMemo(() => {
 +		const lastMsg = modifiedMessages[modifiedMessages.length - 1]
-+		if (!lastMsg) return true
++		// New/empty chats should stay interactive until the user sends the first message.
++		if (!lastMsg) return false
 +		if (lastMsg.say === "user_feedback" || lastMsg.say === "user_feedback_diff") return true
 +		return false
 +	}, [modifiedMessages])
@@ -18,7 +19,7 @@ index e57b18d..6a8bd26 100644
  	const lastApiReqTotalTokens = useMemo(() => getLastApiReqTotalTokens(modifiedMessages) || undefined, [modifiedMessages])
  
  	// Use custom hooks for state management
-@@ -374,6 +383,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
+@@ -374,6 +384,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
  				/>
  				<InputSection
  					chatState={chatState}
@@ -64,7 +65,7 @@ index f3e5cc4..dfccba2 100644
  
  	return (
 diff --git a/webview-ui/src/components/chat/chat-view/components/layout/MessagesArea.tsx b/webview-ui/src/components/chat/chat-view/components/layout/MessagesArea.tsx
-index c8040dc..ef4d798 100644
+index c8040dc..38b00f2 100644
 --- a/webview-ui/src/components/chat/chat-view/components/layout/MessagesArea.tsx
 +++ b/webview-ui/src/components/chat/chat-view/components/layout/MessagesArea.tsx
 @@ -6,6 +6,7 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -85,7 +86,7 @@ index c8040dc..ef4d798 100644
 +	// (activities text, reasoning shimmer, etc.) — no duplication needed.
 +	const isWaitingForResponse = useMemo(() => {
 +		const lastMsg = modifiedMessages[modifiedMessages.length - 1]
-+		if (!lastMsg) return true
++		if (!lastMsg) return false
 +		if (lastMsg.say === "user_feedback" || lastMsg.say === "user_feedback_diff") return true
 +		return false
 +	}, [modifiedMessages])

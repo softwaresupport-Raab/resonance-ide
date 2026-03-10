@@ -1,8 +1,8 @@
 diff --git a/src/core/prompts/commands.ts b/src/core/prompts/commands.ts
-index 674ac19..b043836 100644
+index 674ac19..01d6fee 100644
 --- a/src/core/prompts/commands.ts
 +++ b/src/core/prompts/commands.ts
-@@ -235,95 +235,450 @@ cline "<prompt>"
+@@ -235,95 +235,488 @@ cline "<prompt>"
  </explicit_instructions>\n
  `
  
@@ -35,49 +35,71 @@ index 674ac19..b043836 100644
 +- On the very first chat in a new workspace
 +
 +## Steps
-+
+ 
+-# Important: Use Non-Interactive Commands
 +### Step 1: Welcome
 +Greet the user warmly:
 +"Welcome to Resonance! 👋
 +I'm your personal assistant for everything you want to organize — whether it's work projects, everyday tasks, or creative endeavors.
 +To help me remember what we're working on across chat sessions, I'll quickly set up my memory system. This will only take a minute."
-+
+ 
+-When running git or gh commands, always use non-interactive variants to ensure output is returned immediately without requiring user interaction:
 +### Step 2: Understand the user's goal
 +Ask the user what they want to organize:
 +<ask_followup_question>
 +<question>What would you like to organize with Resonance?</question>
 +<options>["💼 Work Project — e.g., product launch, client project, strategy", "🏠 Personal Project — e.g., moving, renovation, travel planning", "📋 Ongoing Tasks — e.g., weekly planning, to-dos, routines", "💻 Software Project — e.g., app, website, automation", "🤔 Not sure yet — set up first, topic comes later"]</options>
 +</ask_followup_question>
-+
+ 
+-- **For git commands**: Use \`git --no-pager\` prefix to disable the pager (e.g., \`git --no-pager log\`, \`git --no-pager diff\`, \`git --no-pager show\`)
+-- **For gh commands**: Use \`--json\` flag when possible for structured output, or pipe to \`cat\` if needed (e.g., \`gh pr diff 123 | cat\`)
 +### Step 3: Create folder structure
 +Create the following files based on the user's answer:
-+
+ 
+-This prevents commands from entering interactive/pager mode which would hang waiting for user input.
 +**\`.resonance/01_state.md\`**:
 +\`\`\`markdown
 +# Current State
-+
+ 
+-# Workflow
 +## Last Sync
 +**Date**: [today's date]
 +**Session**: Initial setup
-+
+ 
+-Follow these steps to explain code changes:
 +---
-+
+ 
+-## 1. Gather Information About the Changes
 +## Work Package 1: [Name based on user's answer]
-+
+ 
+-First, use git or gh CLI tools to understand what changes exist. **Always get the full unified diff output**, not just stats:
 +### Phase
 +Kickoff
-+
+ 
+-- For commits: \`git --no-pager show <commit>\` to see a specific commit's full diff
+-- For commit ranges: \`git --no-pager log --oneline <from>..<to>\` to see commits in range, then \`git --no-pager diff <from>..<to>\` for full diff
+-- For branches: \`git --no-pager diff <branch1>..<branch2>\` to see full diff of all changes
+-- For pull requests: \`gh pr view <number> --json commits,files\` for metadata, then \`gh pr diff <number> | cat\` for full diff
+-- For staged changes: \`git --no-pager diff --cached\` to see full diff of staged files
+-- For working directory: \`git --no-pager diff\` for full diff of unstaged changes
 +### Goal
 +[Based on what the user described]
-+
+ 
+-To get a comprehensive overview between two refs, run:
 +### Context
 +- Resonance Framework initialized
 +- First chat started
-+
+ 
+-**Bash:**
+-\`\`\`bash
+-echo "=== COMMITS ==="; git --no-pager log --oneline <from_ref>..<to_ref>; echo "=== CHANGED FILES ==="; git diff <from_ref>..<to_ref> --name-only; echo "=== FULL DIFF ==="; git --no-pager diff <from_ref>..<to_ref>
 +### Next Session
 +- [First meaningful task based on the project]
-+\`\`\`
-+
+ \`\`\`
+ 
+-**PowerShell:**
+-\`\`\`powershell
+-'=== COMMITS ==='; git --no-pager log --oneline <from_ref>..<to_ref>; '=== CHANGED FILES ==='; git diff <from_ref>..<to_ref> --name-only; '=== FULL DIFF ==='; git --no-pager diff <from_ref>..<to_ref>
 +**\`.resonance/02_memory.md\`**:
 +\`\`\`markdown
 +# Memory — Lessons Learned
@@ -109,8 +131,7 @@ index 674ac19..b043836 100644
 +From now on, I'll automatically remember our progress. When you open a new chat, I'll know exactly where we left off.
 +
 +Should I get started with [first task from the work package]?"
- 
--# Important: Use Non-Interactive Commands
++
 +## Important rules
 +- Keep the setup short and friendly
 +- Do NOT create empty template files — only files with real content
@@ -124,50 +145,45 @@ index 674ac19..b043836 100644
 +# Resonance Framework — Guided Demo
 +
 +Walk through a simulated first day with Resonance. Each step demonstrates a core capability: persistent memory, document creation, human-in-the-loop collaboration, AI-assisted editing, live API integration, and session continuity.
- 
--When running git or gh commands, always use non-interactive variants to ensure output is returned immediately without requiring user interaction:
++
 +**Language Note**: All responses and interactions will automatically adapt to match the language the user is speaking. If the user communicates in German, respond in German. If in English, respond in English. Match the user's language throughout the entire demo.
- 
--- **For git commands**: Use \`git --no-pager\` prefix to disable the pager (e.g., \`git --no-pager log\`, \`git --no-pager diff\`, \`git --no-pager show\`)
--- **For gh commands**: Use \`--json\` flag when possible for structured output, or pipe to \`cat\` if needed (e.g., \`gh pr diff 123 | cat\`)
++
++## ⚠️ CRITICAL PACING RULE — ONE STEP AT A TIME
++
++This is the MOST IMPORTANT rule for this demo:
++
++1. **Complete exactly ONE step per response.** Never combine multiple steps in a single response.
++2. **After completing a step, STOP.** Do not continue to the next step in the same response.
++3. **Every step MUST end with an \`ask_followup_question\`.** This is the only mechanism to pause and wait for the user. If a step doesn't have one, you are doing it wrong.
++4. **Never skip the explanatory text.** Each step has context that helps the user understand what they're seeing — always include it before performing actions.
++5. **Tool calls within a step are fine** (e.g., reading files within Step 2). But do NOT start the next step's tool calls.
++
++Example of WRONG behavior: Reading files (Step 2) + creating invitation (Step 3) in the same response.
++Example of CORRECT behavior: Reading files → give briefing → ask_followup_question → STOP → wait for user → THEN do Step 3.
++
 +## Demo Context — Birthday Party Planning
- 
--This prevents commands from entering interactive/pager mode which would hang waiting for user input.
++
 +This demo simulates a project that has been running for a few weeks. You will CREATE the .resonance/ files below to set the scene, then give the user a briefing as if these files were already there from previous sessions.
- 
--# Workflow
++
 +### File: .resonance/01_state.md
 +Create this file with the following content:
 +\`\`\`markdown
 +# Current State
- 
--Follow these steps to explain code changes:
++
 +## Last Sync
 +**Date**: [calculate: 20 days before today's date, format YYYY-MM-DD]
 +**Session**: Party Planning — Location Research & Guest List Draft
- 
--## 1. Gather Information About the Changes
++
 +## ⚠️ Overdue Items
 +- **Invitations** (due [22 days before today], now overdue) — Need to send them this week, party is in 3 weeks!
- 
--First, use git or gh CLI tools to understand what changes exist. **Always get the full unified diff output**, not just stats:
++
 +---
- 
--- For commits: \`git --no-pager show <commit>\` to see a specific commit's full diff
--- For commit ranges: \`git --no-pager log --oneline <from>..<to>\` to see commits in range, then \`git --no-pager diff <from>..<to>\` for full diff
--- For branches: \`git --no-pager diff <branch1>..<branch2>\` to see full diff of all changes
--- For pull requests: \`gh pr view <number> --json commits,files\` for metadata, then \`gh pr diff <number> | cat\` for full diff
--- For staged changes: \`git --no-pager diff --cached\` to see full diff of staged files
--- For working directory: \`git --no-pager diff\` for full diff of unstaged changes
++
 +## Work Package 1: Sarah's 30th Birthday Party
- 
--To get a comprehensive overview between two refs, run:
++
 +### Phase
 +Planning & Organization — Date set, location research ongoing, many details still open
- 
--**Bash:**
--\`\`\`bash
--echo "=== COMMITS ==="; git --no-pager log --oneline <from_ref>..<to_ref>; echo "=== CHANGED FILES ==="; git diff <from_ref>..<to_ref> --name-only; echo "=== FULL DIFF ==="; git --no-pager diff <from_ref>..<to_ref>
++
 +### Goal
 +Organize an unforgettable 30th birthday party for Sarah on Saturday, [10 weeks from today, pick the nearest Saturday] at 7:00 PM. Budget: ~€1,200 for 25 guests. Italian cuisine (Sarah's favorite), outdoor if possible, relaxed but stylish atmosphere.
 +
@@ -188,11 +204,8 @@ index 674ac19..b043836 100644
 +- Finalize guest list and send invitations
 +- Order decorations online
 +- Contact caterer if we choose event space option
- \`\`\`
- 
--**PowerShell:**
--\`\`\`powershell
--'=== COMMITS ==='; git --no-pager log --oneline <from_ref>..<to_ref>; '=== CHANGED FILES ==='; git diff <from_ref>..<to_ref> --name-only; '=== FULL DIFF ==='; git --no-pager diff <from_ref>..<to_ref>
++\`\`\`
++
 +### File: .resonance/02_memory.md
 +Create this file with the following content:
 +\`\`\`markdown
@@ -240,9 +253,8 @@ index 674ac19..b043836 100644
 +- **Decision**: Saturday evening at 7:00 PM
 +- **Reason**: Weekend, early summer, evening allows for dinner + after-party
 +- **Alternative rejected**: Friday evening (too rushed after work)
- \`\`\`
- 
--Replace \`<from_ref>\` and \`<to_ref>\` with the appropriate git references (commit hashes, branch names, tags, HEAD~1, etc.).
++\`\`\`
++
 +### File: .resonance/backlog/backlog.md
 +Create this file with the following content:
 +\`\`\`markdown
@@ -303,58 +315,41 @@ index 674ac19..b043836 100644
 +<question>What would you like to try?</question>
 +<options>["🚀 Full Run-Through — All features in sequence", "💬 Briefing — Read and discuss project status", "📝 Documents — Create, edit, and store", "🌐 Live Data — Fetch real data from the internet"]</options>
 +</ask_followup_question>
- 
--## 2. Build Context for Better Explanations
++
 +If the user picks a specific path, skip to the relevant steps:
 +- "Full Run-Through" → continue with Step 2
 +- "Briefing" → go to Step 2, then skip to Step 7
 +- "Documents" → go to Step 3
 +- "Live Data" → go to Step 6
- 
--Before calling generate_explanation, gather context that will help produce more insightful explanations:
++
 +Track which sections were actually executed during this run. In Step 7, only mark completed capabilities that were truly demonstrated.
- 
--- Read relevant files to understand the codebase structure
--- Look at related code that the changes interact with
--- Check for tests that might explain the intended behavior
--- Review any related documentation or comments
--- If needed, view file contents at different versions: \`git --no-pager show <ref>:<file>\`
++
 +---
- 
--The more context you have in your conversation history, the better the explanations will be since generate_explanation uses the full conversation context when generating comments.
++
 +## Step 2: Morning Briefing — Persistent Memory
- 
--## 3. Determine Git References
++
 +Read the .resonance/ files you just created and give the user a morning briefing. This demonstrates that Resonance remembers context across sessions.
- 
--Identify the appropriate git references for the diff:
++
 +Summarize what you found in a brief, friendly "Good Morning" standup format:
 +- **Done last time**: What was completed last session
 +- **🔴 Overdue items**: Call out overdue tasks (especially the invitations)
 +- **Open tasks**: What else is still pending
 +- **Key insights**: Any lessons from memory that are relevant today
 +- **Recommendation**: Strongly recommend booking the location and sending invitations ASAP
- 
--- **from_ref**: The "before" state (commit hash, branch name, tag, HEAD~1, etc.)
--- **to_ref**: The "after" state (optional - defaults to working directory if omitted)
-+Keep it conversational. End with: "The invitations are overdue and the location needs to be booked this week. Should we tackle the invitations first?"
- 
--Examples of reference combinations:
--- Last commit: from_ref="HEAD~1", to_ref="HEAD"
--- Specific commit: from_ref="abc123^", to_ref="abc123"
--- Branch comparison: from_ref="main", to_ref="feature-branch"
--- Staged changes: from_ref="HEAD" (omit to_ref to compare to working directory with staged changes)
--- PR changes: from_ref="main", to_ref="pr-branch-name"
++
++Keep it conversational. End this step with the following question:
++
++<ask_followup_question>
++<question>The invitations are overdue and the location needs to be booked this week. Shall we tackle the invitations?</question>
++<options>["📝 Yes, let's draft the invitation!", "📋 Tell me more about the options first"]</options>
++</ask_followup_question>
++
++**STOP HERE.** Do not continue to Step 3 until the user responds. This is a mandatory pause point.
++
 +---
- 
--## 4. Call generate_explanation
++
 +## Step 3: Create a Document — Invitation Draft
- 
--Use the generate_explanation tool with:
--- **title**: A descriptive title for the diff view (e.g., "Changes in commit abc123", "PR #42: Add user authentication")
--- **from_ref**: The git reference for the "before" state
--- **to_ref**: The git reference for the "after" state (optional)
--Below is the user's input describing what changes they want explained. If no input is provided, default to analyzing uncommitted changes in the working directory (may or may not be staged).
++
 +Now we create a document from scratch. This demonstrates file creation with AI assistance.
 +
 +Say to the user: "Let's create a document to showcase this capability. I'll draft the party invitation."
@@ -387,7 +382,15 @@ index 674ac19..b043836 100644
 +- If they pick a predefined option, ask them to provide 2-3 bullet points of content for that section
 +- If they pick "Something else", ask them what they want to add
 +
-+Then add their section to \`invitation_draft.md\`. Confirm: "Your section has been added. Now I'll show you how I can polish the whole thing."
++Then add their section to \`invitation_draft.md\`. After adding the section, end with this question:
++
++<ask_followup_question>
++<question>Your section has been added! Now I can polish the whole invitation — shall I improve and finalize it?</question>
++<options>["✨ Yes, polish it!", "👍 Looks good as is, skip to the next feature"]</options>
++</ask_followup_question>
++
++**STOP HERE.** Do not continue to Step 5 until the user responds.
++If the user chooses to skip, jump to Step 6.
 +
 +---
 +
@@ -417,28 +420,63 @@ index 674ac19..b043836 100644
 +  - "Send invitations"
 +last_updated: [today's date]
 +---
-+\`\`\`
-+
+ \`\`\`
+ 
+-Replace \`<from_ref>\` and \`<to_ref>\` with the appropriate git references (commit hashes, branch names, tags, HEAD~1, etc.).
 +Then explain to the user:
 +"Resonance saves finished documents in \`docs/\` — with a frontmatter header that describes what it's about and when to read it. The next time you open a chat about the party, Resonance automatically finds and reads this document. No knowledge is lost."
-+
+ 
+-## 2. Build Context for Better Explanations
++End this step with a transition question:
+ 
+-Before calling generate_explanation, gather context that will help produce more insightful explanations:
++<ask_followup_question>
++<question>The document is saved! Ready to see the next feature?</question>
++<options>["🌐 Yes, show me Live Data!", "⏭️ Skip to the summary"]</options>
++</ask_followup_question>
+ 
+-- Read relevant files to understand the codebase structure
+-- Look at related code that the changes interact with
+-- Check for tests that might explain the intended behavior
+-- Review any related documentation or comments
+-- If needed, view file contents at different versions: \`git --no-pager show <ref>:<file>\`
++**STOP HERE.** Do not continue to Step 6 until the user responds.
++If the user chooses "Skip to the summary", jump directly to Step 7.
+ 
+-The more context you have in your conversation history, the better the explanations will be since generate_explanation uses the full conversation context when generating comments.
 +---
-+
+ 
+-## 3. Determine Git References
 +## Step 6: Fetching Live Data — API Integration
-+
+ 
+-Identify the appropriate git references for the diff:
 +This step shows that Resonance can pull live data from the internet — not just work with local files.
-+
+ 
+-- **from_ref**: The "before" state (commit hash, branch name, tag, HEAD~1, etc.)
+-- **to_ref**: The "after" state (optional - defaults to working directory if omitted)
 +First, briefly explain the terminal:
 +"In a moment, a **Terminal** will open at the bottom — that's a command line where Resonance can execute commands. You don't need to type anything there; I'll do it for you. If it bothers you, you can close it anytime with the **X** in the top right corner of the terminal window."
-+
+ 
+-Examples of reference combinations:
+-- Last commit: from_ref="HEAD~1", to_ref="HEAD"
+-- Specific commit: from_ref="abc123^", to_ref="abc123"
+-- Branch comparison: from_ref="main", to_ref="feature-branch"
+-- Staged changes: from_ref="HEAD" (omit to_ref to compare to working directory with staged changes)
+-- PR changes: from_ref="main", to_ref="pr-branch-name"
 +Then say:
 +"I'll now show you how Resonance can fetch live data from the internet — for example, weather data, exchange rates, or information about a country. This works with any public or internal interface (API)."
-+
+ 
+-## 4. Call generate_explanation
 +<ask_followup_question>
 +<question>What live data should we fetch?</question>
 +<options>["🌤️ Weather — Current weather for the party location", "💱 Exchange Rates — Current EUR rates", "🎓 Fun Fact — A random fact for the party", "🌍 Look up a Country — Info about a country"]</options>
 +</ask_followup_question>
-+
+ 
+-Use the generate_explanation tool with:
+-- **title**: A descriptive title for the diff view (e.g., "Changes in commit abc123", "PR #42: Add user authentication")
+-- **from_ref**: The git reference for the "before" state
+-- **to_ref**: The git reference for the "after" state (optional)
+-Below is the user's input describing what changes they want explained. If no input is provided, default to analyzing uncommitted changes in the working directory (may or may not be staged).
 +Based on the choice, run the appropriate command:
 +- Weather: Ask the user for a city (suggest the party city). Use Open-Meteo (free, no API key):
 +  \`curl -s "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&current_weather=true"\` (default: Munich)
