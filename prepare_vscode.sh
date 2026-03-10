@@ -179,7 +179,10 @@ done
 
 # {{{ copy Resonance extension VSIX for builtInExtensions
 VSIX_SRC=""
-if [[ -f "../resonance-extension/dist/resonance-3.57.1.vsix" ]]; then
+# Prefer in-repo copy (CI), fall back to sibling dev path
+if [[ -f "../resonance.vsix" ]]; then
+  VSIX_SRC="../resonance.vsix"
+elif [[ -f "../resonance-extension/dist/resonance-3.57.1.vsix" ]]; then
   VSIX_SRC="../resonance-extension/dist/resonance-3.57.1.vsix"
 fi
 
