@@ -158,6 +158,26 @@ done
 
 This catches patch drift early and prevents expensive CI failures later.
 
+#### Local Preflight
+
+Run a local CI-like verification before pushing:
+
+```bash
+./preflight.sh --patch-only
+```
+
+For deeper validation (slow):
+
+```bash
+./preflight.sh --full
+```
+
+What it checks:
+- Built-in VSIX checksums in `product.json` against local `.vsix` files
+- Clean reset to upstream commit from `upstream/<quality>.json`
+- Patch application in exact CI order (`patches/*.patch`)
+- Optional compile/bundle stages for early failure detection
+
 ## <a id="why"></a>Why Does This Exist
 
 This repository contains build files to generate free release binaries of Microsoft's Visual Studio Code. When we speak of "free software", we're talking about freedom, not price.
