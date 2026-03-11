@@ -1,0 +1,51 @@
+diff --git a/extensions/terminal-suggest/src/completions/codium-insiders.ts b/extensions/terminal-suggest/src/completions/codium-insiders.ts
+new file mode 100644
+index 0000000..4ed2fed
+--- /dev/null
++++ b/extensions/terminal-suggest/src/completions/codium-insiders.ts
+@@ -0,0 +1,19 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++import { commonOptions, extensionManagementOptions, troubleshootingOptions } from './code';
++import codium from './codium';
++
++const codiumInsidersCompletionSpec: Fig.Spec = {
++	...codium,
++	name: 'codium-insiders',
++	description: 'VSCodium Insiders',
++	options: [
++		...commonOptions,
++		...extensionManagementOptions('codium-insiders'),
++		...troubleshootingOptions('codium-insiders'),
++	],
++};
++
++export default codiumInsidersCompletionSpec;
+\ No newline at end of file
+diff --git a/extensions/terminal-suggest/src/completions/codium.ts b/extensions/terminal-suggest/src/completions/codium.ts
+new file mode 100644
+index 0000000..c08d520
+--- /dev/null
++++ b/extensions/terminal-suggest/src/completions/codium.ts
+@@ -0,0 +1,18 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++import code, { commonOptions, extensionManagementOptions, troubleshootingOptions } from './code';
++
++const codiumCompletionSpec: Fig.Spec = {
++	...code,
++	name: 'codium',
++	description: 'VSCodium',
++	options: [
++		...commonOptions,
++		...extensionManagementOptions('codium'),
++		...troubleshootingOptions('codium'),
++	],
++};
++
++export default codiumCompletionSpec;
+\ No newline at end of file
