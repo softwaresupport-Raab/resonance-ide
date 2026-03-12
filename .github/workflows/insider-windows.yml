@@ -177,6 +177,7 @@ jobs:
       SHOULD_BUILD: ${{ (needs.check.outputs.SHOULD_BUILD == 'yes' || github.event.inputs.generate_assets == 'true') && 'yes' || 'no' }}
       SHOULD_DEPLOY: ${{ needs.check.outputs.SHOULD_DEPLOY }}
       VSCODE_ARCH: ${{ matrix.vscode_arch }}
+      SIGNPATH_AVAILABLE: ${{ secrets.SIGNPATH_ORGANIZATION_ID != '' && secrets.SIGNPATH_API_TOKEN != '' && secrets.SIGNPATH_PROJECT_SLUG != '' && secrets.SIGNPATH_POLICY_SLUG != '' }}
     outputs:
       RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
       SHOULD_DEPLOY: ${{ env.SHOULD_DEPLOY }}
@@ -251,10 +252,6 @@ jobs:
           retention-days: 1
         if: env.SHOULD_BUILD == 'yes' && vars.DISABLE_INSIDER_WINDOWS_SIGNING != 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true')
 
-      - name: Signing skipped (missing SignPath secrets)
-        run: echo "Skipping signing because one or more SignPath secrets are not configured. Unsigned artifacts are available."
-        if: env.SHOULD_BUILD == 'yes' && vars.DISABLE_INSIDER_WINDOWS_SIGNING != 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true') && (secrets.SIGNPATH_API_TOKEN == '' || secrets.SIGNPATH_ORGANIZATION_ID == '' || secrets.SIGNPATH_PROJECT_SLUG == '' || secrets.SIGNPATH_POLICY_SLUG == '')
-
       - name: Signing
         uses: signpath/github-action-submit-signing-request@v2
         with:
@@ -268,7 +265,7 @@ jobs:
           # 3h to manually approve the request
           wait-for-completion-timeout-in-seconds: 10800
           output-artifact-directory: assets/
-        if: env.SHOULD_BUILD == 'yes' && vars.DISABLE_INSIDER_WINDOWS_SIGNING != 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true') && secrets.SIGNPATH_API_TOKEN != '' && secrets.SIGNPATH_ORGANIZATION_ID != '' && secrets.SIGNPATH_PROJECT_SLUG != '' && secrets.SIGNPATH_POLICY_SLUG != ''
+        if: env.SHOULD_BUILD == 'yes' && env.SIGNPATH_AVAILABLE == 'true' && vars.DISABLE_INSIDER_WINDOWS_SIGNING != 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true')
 
       - name: Prepare checksums
         run: ./prepare_checksums.sh
