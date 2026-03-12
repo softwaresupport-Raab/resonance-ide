@@ -251,6 +251,10 @@ jobs:
           retention-days: 1
         if: env.SHOULD_BUILD == 'yes' && vars.DISABLE_INSIDER_WINDOWS_SIGNING != 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true')
 
+      - name: Signing skipped (missing SignPath secrets)
+        run: echo "Skipping signing because one or more SignPath secrets are not configured. Unsigned artifacts are available."
+        if: env.SHOULD_BUILD == 'yes' && vars.DISABLE_INSIDER_WINDOWS_SIGNING != 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true') && (secrets.SIGNPATH_API_TOKEN == '' || secrets.SIGNPATH_ORGANIZATION_ID == '' || secrets.SIGNPATH_PROJECT_SLUG == '' || secrets.SIGNPATH_POLICY_SLUG == '')
+
       - name: Signing
         uses: signpath/github-action-submit-signing-request@v2
         with:
@@ -264,7 +268,7 @@ jobs:
           # 3h to manually approve the request
           wait-for-completion-timeout-in-seconds: 10800
           output-artifact-directory: assets/
-        if: env.SHOULD_BUILD == 'yes' && vars.DISABLE_INSIDER_WINDOWS_SIGNING != 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true')
+        if: env.SHOULD_BUILD == 'yes' && vars.DISABLE_INSIDER_WINDOWS_SIGNING != 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true') && secrets.SIGNPATH_API_TOKEN != '' && secrets.SIGNPATH_ORGANIZATION_ID != '' && secrets.SIGNPATH_PROJECT_SLUG != '' && secrets.SIGNPATH_POLICY_SLUG != ''
 
       - name: Prepare checksums
         run: ./prepare_checksums.sh
