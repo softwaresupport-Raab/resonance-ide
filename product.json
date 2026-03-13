@@ -611,7 +611,7 @@
   "configurationDefaults": {
     "workbench.colorTheme": "Solarized Light",
     "workbench.iconTheme": "helium-icon-theme",
-    "workbench.activityBar.location": "hidden",
+    "workbench.activityBar.location": "default",
     "workbench.statusBar.visible": false,
     "workbench.sideBar.location": "left",
     "workbench.panel.defaultLocation": "bottom",

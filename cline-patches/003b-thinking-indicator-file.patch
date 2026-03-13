@@ -1,0 +1,43 @@
+diff --git a/webview-ui/src/components/chat/chat-view/components/layout/ThinkingIndicator.tsx b/webview-ui/src/components/chat/chat-view/components/layout/ThinkingIndicator.tsx
+new file mode 100644
+index 0000000..81aff70
+--- /dev/null
++++ b/webview-ui/src/components/chat/chat-view/components/layout/ThinkingIndicator.tsx
+@@ -0,0 +1,37 @@
++import type React from "react"
++
++/**
++ * ThinkingIndicator
++ *
++ * Displayed in the Virtuoso Footer while `isWaitingForResponse` is true —
++ * i.e. from the moment the user sends a message until the first assistant token
++ * arrives (or the task errors / aborts).
++ *
++ * Design:
++ *  - Three dots with staggered spring-bounce animation (Zero Jank: no linear tweens).
++ *  - Entrance: fade + slide-up via `animate-thinking-in` (defined in theme.css).
++ *  - Accessibility: role="status" + aria-live="polite" so screen readers announce it.
++ */
++export const ThinkingIndicator: React.FC = () => {
++	return (
++		<div
++			aria-label="Thinking"
++			aria-live="polite"
++			className="px-4 pt-2 pb-2.5 animate-thinking-in"
++			role="status">
++			<div className="ml-1 flex items-center gap-1">
++				<span
++					className="inline-block size-2 rounded-full bg-description animate-dot-bounce"
++				/>
++				<span
++					className="inline-block size-2 rounded-full bg-description animate-dot-bounce"
++					style={{ animationDelay: "160ms" }}
++				/>
++				<span
++					className="inline-block size-2 rounded-full bg-description animate-dot-bounce"
++					style={{ animationDelay: "320ms" }}
++				/>
++			</div>
++		</div>
++	)
++}

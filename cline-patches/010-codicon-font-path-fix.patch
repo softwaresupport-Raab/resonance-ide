@@ -1,0 +1,13 @@
+diff --git a/webview-ui/vite.config.ts b/webview-ui/vite.config.ts
+index 7e1122b..4606c0e 100644
+--- a/webview-ui/vite.config.ts
++++ b/webview-ui/vite.config.ts
+@@ -38,6 +38,8 @@ if (!VALID_PLATFORMS.includes(platform)) {
+ console.log("Building webview for", platform)
+ 
+ export default defineConfig({
++	// Resonance: use relative paths for assets so codicon.ttf resolves in VS Code webview
++	base: './',
+ 	optimizeDeps: {
+ 		force: true, // Forces re-optimization
+ 	},

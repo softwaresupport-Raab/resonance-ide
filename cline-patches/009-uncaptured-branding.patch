@@ -1,0 +1,414 @@
+diff --git a/proto/cline/account.proto b/proto/cline/account.proto
+index 44e121b..1ed257d 100644
+--- a/proto/cline/account.proto
++++ b/proto/cline/account.proto
+@@ -41,7 +41,7 @@ service AccountService {
+   rpc openrouterAuthClicked(EmptyRequest) returns (Empty);
+ 
+   rpc requestyAuthClicked(StringRequest) returns (Empty);
+-  
++
+   rpc hicapAuthClicked(EmptyRequest) returns (Empty);
+ 
+   // Returns a link the webview can use to redirect back to the user's IDE.
+diff --git a/webview-ui/src/components/chat/ChatTextArea.tsx b/webview-ui/src/components/chat/ChatTextArea.tsx
+index e5cd9ee..3c7b55d 100644
+--- a/webview-ui/src/components/chat/ChatTextArea.tsx
++++ b/webview-ui/src/components/chat/ChatTextArea.tsx
+@@ -1787,7 +1787,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 							className="text-xs px-2 flex flex-col gap-1"
+ 							hidden={shownTooltipMode === null}
+ 							side="top">
+-							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Cline will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
++							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Resonance will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
+ 							<p className="text-description/80 text-xs mb-0">
+ 								Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
+ 							</p>
+diff --git a/webview-ui/src/components/chat/ErrorRow.tsx b/webview-ui/src/components/chat/ErrorRow.tsx
+index fbb9c88..57a1642 100644
+--- a/webview-ui/src/components/chat/ErrorRow.tsx
++++ b/webview-ui/src/components/chat/ErrorRow.tsx
+@@ -88,7 +88,7 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
+ 								{/* The user is signed in or not using cline provider */}
+ 								{isClineProvider && !clineUser ? (
+ 									<Button className="w-full mb-4" disabled={isLoginLoading} onClick={handleSignIn}>
+-										Sign in to Cline
++										Sign in to Resonance
+ 										{isLoginLoading && (
+ 											<span className="ml-1 animate-spin">
+ 												<span className="codicon codicon-refresh"></span>
+@@ -117,7 +117,7 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
+ 				return (
+ 					<div className="flex flex-col p-2 rounded text-xs opacity-80 bg-quote text-foreground">
+ 						<div>
+-							Cline tried to access <code>{message.text}</code> which is blocked by the <code>.clineignore</code>
++							Resonance tried to access <code>{message.text}</code> which is blocked by the <code>.clineignore</code>
+ 							file.
+ 						</div>
+ 					</div>
+diff --git a/webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx b/webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx
+index eebfd40..34f619f 100644
+--- a/webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx
++++ b/webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx
+@@ -361,5 +361,5 @@ function getToolGroupSummary(messages: ClineMessage[]): string {
+ 		parts.push(`performed ${counts.search} search${counts.search > 1 ? "es" : ""}`)
+ 	}
+ 
+-	return parts.length === 0 ? "Context" : "Cline" + action + parts.join(", ")
++	return parts.length === 0 ? "Context" : "Resonance" + action + parts.join(", ")
+ }
+diff --git a/webview-ui/src/components/common/TelemetryBanner.tsx b/webview-ui/src/components/common/TelemetryBanner.tsx
+index a957201..bfbf04e 100644
+--- a/webview-ui/src/components/common/TelemetryBanner.tsx
++++ b/webview-ui/src/components/common/TelemetryBanner.tsx
+@@ -21,10 +21,10 @@ export const TelemetryBanner: React.FC = () => {
+ 
+ 	return (
+ 		<div className="bg-banner-background text-banner-foreground px-3 py-2 flex flex-col gap-1 shrink-0 mb-1 relative text-sm m-4">
+-			<h3 className="m-0">Help Improve Cline</h3>
++			<h3 className="m-0">Help Improve Resonance</h3>
+ 			<i>(and access experimental features)</i>
+ 			<p className="m-0">
+-				Cline collects error and usage data to help us fix bugs and improve the extension. No code, prompts, or personal
++				Resonance collects error and usage data to help us fix bugs and improve the extension. No code, prompts, or personal
+ 				information is ever sent.
+ 			</p>
+ 			<p className="m-0">
+diff --git a/webview-ui/src/components/common/WhatsNewModal.tsx b/webview-ui/src/components/common/WhatsNewModal.tsx
+index ec32cc6..26601ba 100644
+--- a/webview-ui/src/components/common/WhatsNewModal.tsx
++++ b/webview-ui/src/components/common/WhatsNewModal.tsx
+@@ -1,13 +1,5 @@
+-import React, { useCallback, useRef } from "react"
+-import { useMount } from "react-use"
+-import DiscordIcon from "@/assets/DiscordIcon"
+-import GitHubIcon from "@/assets/GitHubIcon"
+-import LinkedInIcon from "@/assets/LinkedInIcon"
+-import RedditIcon from "@/assets/RedditIcon"
+-import XIcon from "@/assets/XIcon"
++import React from "react"
+ import { Dialog, DialogContent } from "@/components/ui/dialog"
+-import { useExtensionState } from "@/context/ExtensionStateContext"
+-import { useApiConfigurationHandlers } from "../settings/utils/useApiConfigurationHandlers"
+ 
+ interface WhatsNewModalProps {
+ 	open: boolean
+@@ -16,83 +8,6 @@ interface WhatsNewModalProps {
+ }
+ 
+ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ open, onClose, version }) => {
+-	const { openRouterModels, setShowChatModelSelector, refreshOpenRouterModels, navigateToSettingsModelPicker } =
+-		useExtensionState()
+-	const { handleFieldsChange } = useApiConfigurationHandlers()
+-
+-	const clickedModelsRef = useRef<Set<string>>(new Set())
+-
+-	// Get latest model list in case user hits shortcut button to set model
+-	useMount(refreshOpenRouterModels)
+-
+-	const setModel = useCallback(
+-		(modelId: string) => {
+-			handleFieldsChange({
+-				planModeOpenRouterModelId: modelId,
+-				actModeOpenRouterModelId: modelId,
+-				planModeOpenRouterModelInfo: openRouterModels[modelId],
+-				actModeOpenRouterModelInfo: openRouterModels[modelId],
+-				planModeApiProvider: "cline",
+-				actModeApiProvider: "cline",
+-			})
+-
+-			clickedModelsRef.current.add(modelId)
+-			setShowChatModelSelector(true)
+-			onClose()
+-		},
+-		[handleFieldsChange, openRouterModels, setShowChatModelSelector, onClose],
+-	)
+-
+-	const navigateToModelPicker = useCallback(
+-		(initialModelTab: "recommended" | "free", modelId?: string) => {
+-			// Switch to Cline provider first so the model picker tab works
+-			// Optionally also set the model if provided
+-			const updates: Record<string, any> = {
+-				planModeApiProvider: "cline",
+-				actModeApiProvider: "cline",
+-			}
+-			if (modelId) {
+-				updates.planModeOpenRouterModelId = modelId
+-				updates.actModeOpenRouterModelId = modelId
+-				updates.planModeOpenRouterModelInfo = openRouterModels[modelId]
+-				updates.actModeOpenRouterModelInfo = openRouterModels[modelId]
+-			}
+-			handleFieldsChange(updates)
+-			onClose()
+-			navigateToSettingsModelPicker({ targetSection: "api-config", initialModelTab })
+-		},
+-		[handleFieldsChange, navigateToSettingsModelPicker, onClose, openRouterModels],
+-	)
+-
+-	type InlineModelLinkProps =
+-		| { type: "model"; modelId: string; label: string }
+-		| { type: "picker"; pickerTab: "recommended" | "free"; modelId: string; label: string }
+-
+-	const InlineModelLink: React.FC<InlineModelLinkProps> = (props) => {
+-		if (props.type === "picker") {
+-			return (
+-				<span
+-					onClick={() => navigateToModelPicker(props.pickerTab, props.modelId)}
+-					style={{ color: "var(--vscode-textLink-foreground)", cursor: "pointer" }}>
+-					{props.label}
+-				</span>
+-			)
+-		}
+-
+-		const isClicked = clickedModelsRef.current.has(props.modelId)
+-		if (isClicked) {
+-			return null
+-		}
+-
+-		return (
+-			<span
+-				onClick={() => setModel(props.modelId)}
+-				style={{ color: "var(--vscode-textLink-foreground)", cursor: "pointer" }}>
+-				{props.label}
+-			</span>
+-		)
+-	}
+-
+ 	const inlineCodeStyle: React.CSSProperties = {
+ 		backgroundColor: "var(--vscode-textCodeBlock-background)",
+ 		padding: "2px 6px",
+@@ -118,95 +33,18 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ open, onClose, ver
+ 					{/* Description */}
+ 					<ul className="text-sm pl-3 list-disc" style={{ color: "var(--vscode-descriptionForeground)" }}>
+ 						<li className="mb-2">
+-							<strong>Cline CLI 2.0:</strong> Major upgrade bringing interactive and autonomous agentic coding to
+-							your terminal. Install with <code style={inlineCodeStyle}>npm install -g cline</code>
++							<strong>Persistent Memory:</strong> Resonance maintains state across sessions via the{" "}
++							<code style={inlineCodeStyle}>.resonance/</code> directory.
+ 						</li>
+ 						<li className="mb-2">
+-							<strong> Anthropic Opus 4.6 is now available!</strong> Experience Anthropic's latest and most capable
+-							model.{" "}
+-							<InlineModelLink
+-								label="Try now"
+-								modelId="anthropic/claude-opus-4.6"
+-								pickerTab="recommended"
+-								type="picker"
+-							/>
++							<strong>Work Package Management:</strong> Organize tasks, track progress, and manage knowledge
++							with structured state files.
+ 						</li>
+ 						<li className="mb-2">
+-							<strong>🎉 Free promo: Minimax-2.1 and Kimi-k2.5!</strong> Available free for a limited time.{" "}
+-							<InlineModelLink label="Minimax-2.1" modelId="minimax/minimax-m2.1" pickerTab="free" type="picker" />
+-							{" | "}
+-							<InlineModelLink label="Kimi-k2.5" modelId="moonshotai/kimi-k2.5" pickerTab="free" type="picker" />
++							<strong>Session Continuity:</strong> Every session reads{" "}
++							<code style={inlineCodeStyle}>01_state.md</code> to pick up right where you left off.
+ 						</li>
+ 					</ul>
+-
+-					{/* Social Icons Section */}
+-					<div className="flex flex-col items-center gap-3 mt-4 pt-4 border-t border-[var(--vscode-widget-border)]">
+-						{/* Icon Row */}
+-						<div className="flex items-center gap-4">
+-							{/* X/Twitter */}
+-							<a
+-								aria-label="Follow us on X"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://x.com/cline"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<XIcon />
+-							</a>
+-
+-							{/* Discord */}
+-							<a
+-								aria-label="Join our Discord"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://discord.gg/cline"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<DiscordIcon />
+-							</a>
+-
+-							{/* GitHub */}
+-							<a
+-								aria-label="Star us on GitHub"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://github.com/cline/cline"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<GitHubIcon />
+-							</a>
+-
+-							{/* Reddit */}
+-							<a
+-								aria-label="Join our subreddit"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://www.reddit.com/r/cline/"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<RedditIcon />
+-							</a>
+-
+-							{/* LinkedIn */}
+-							<a
+-								aria-label="Follow us on LinkedIn"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://www.linkedin.com/company/clinebot/"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<LinkedInIcon />
+-							</a>
+-						</div>
+-
+-						{/* GitHub Star CTA */}
+-						<p className="text-sm text-center" style={{ color: "var(--vscode-descriptionForeground)" }}>
+-							Please support Cline by{" "}
+-							<a
+-								href="https://github.com/cline/cline"
+-								rel="noopener noreferrer"
+-								style={{ color: "var(--vscode-textLink-foreground)" }}
+-								target="_blank">
+-								starring us on GitHub
+-							</a>
+-							.
+-						</p>
+-					</div>
+ 				</div>
+ 			</DialogContent>
+ 		</Dialog>
+diff --git a/webview-ui/src/components/settings/ClineAccountInfoCard.tsx b/webview-ui/src/components/settings/ClineAccountInfoCard.tsx
+index 86fe88d..2cd1a5b 100644
+--- a/webview-ui/src/components/settings/ClineAccountInfoCard.tsx
++++ b/webview-ui/src/components/settings/ClineAccountInfoCard.tsx
+@@ -34,7 +34,7 @@ export const ClineAccountInfoCard = () => {
+ 			) : (
+ 				<div>
+ 					<VSCodeButton className="mt-0" disabled={isLoading} onClick={handleLogin}>
+-						Sign Up with Cline
++						Sign Up with Resonance
+ 						{isLoading && (
+ 							<span className="ml-1 animate-spin">
+ 								<span className="codicon codicon-refresh"></span>
+diff --git a/webview-ui/src/components/settings/SettingsView.tsx b/webview-ui/src/components/settings/SettingsView.tsx
+index a037213..7304439 100644
+--- a/webview-ui/src/components/settings/SettingsView.tsx
++++ b/webview-ui/src/components/settings/SettingsView.tsx
+@@ -79,7 +79,7 @@ export const SETTINGS_TABS: SettingsTab[] = [
+ 	{
+ 		id: "about",
+ 		name: "About",
+-		tooltipText: "About Cline",
++		tooltipText: "About Resonance",
+ 		headerText: "About",
+ 		icon: Info,
+ 	},
+diff --git a/webview-ui/src/components/settings/sections/AboutSection.tsx b/webview-ui/src/components/settings/sections/AboutSection.tsx
+index 6e84d53..84d8512 100644
+--- a/webview-ui/src/components/settings/sections/AboutSection.tsx
++++ b/webview-ui/src/components/settings/sections/AboutSection.tsx
+@@ -11,9 +11,9 @@ const AboutSection = ({ version, renderSectionHeader }: AboutSectionProps) => {
+ 			{renderSectionHeader("about")}
+ 			<Section>
+ 				<div className="flex px-4 flex-col gap-2">
+-					<h2 className="text-lg font-semibold">Cline v{version}</h2>
++					<h2 className="text-lg font-semibold">Resonance v{version}</h2>
+ 					<p>
+-						An AI assistant that can use your CLI and Editor. Cline can handle complex software development tasks
++						A project management assistant with persistent memory. Resonance can handle complex software development tasks
+ 						step-by-step with tools that let him create & edit files, explore large projects, use the browser, and
+ 						execute terminal commands (after you grant permission).
+ 					</p>
+diff --git a/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx b/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
+index 0d1be6b..ff563cc 100644
+--- a/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
++++ b/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
+@@ -90,7 +90,7 @@ const editorFeatures: FeatureToggle[] = [
+ 	},
+ 	{
+ 		id: "cline-web-tools",
+-		label: "Cline Web Tools",
++		label: "Resonance Web Tools",
+ 		description: "Access web browsing and search capabilities",
+ 		stateKey: "clineWebToolsEnabled",
+ 		settingKey: "clineWebToolsEnabled",
+@@ -98,7 +98,7 @@ const editorFeatures: FeatureToggle[] = [
+ 	{
+ 		id: "worktrees",
+ 		label: "Worktrees",
+-		description: "Enables git worktree management for running parallel Cline tasks.",
++		description: "Enables git worktree management for running parallel Resonance tasks.",
+ 		stateKey: "worktreesEnabled",
+ 		settingKey: "worktreesEnabled",
+ 	},
+@@ -348,7 +348,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 												Cline CLI is required for subagents. Install it with
+ 												<code className="px-1">npm install -g cline</code>, then run
+ 												<code className="px-1">cline auth</code>
+-												to authenticate with Cline or configure an API provider.
++											to authenticate with Resonance or configure an API provider.
+ 											</span>
+ 										</p>
+ 										{!isClineCliInstalled && (
+diff --git a/webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx b/webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx
+index e38660a..87382e6 100644
+--- a/webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx
++++ b/webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx
+@@ -42,7 +42,7 @@ const GeneralSettingsSection = ({ renderSectionHeader }: GeneralSettingsSectionP
+ 					</Tooltip>
+ 
+ 					<p className="text-sm mt-[5px] text-description">
+-						Help improve Cline by sending usage data and error reports. No code, prompts, or personal information are
++						Help improve Resonance by sending usage data and error reports. No code, prompts, or personal information are
+ 						ever sent. See our{" "}
+ 						<VSCodeLink
+ 							className="text-inherit"
+diff --git a/webview-ui/src/components/welcome/SuggestedTasks.tsx b/webview-ui/src/components/welcome/SuggestedTasks.tsx
+index 02eea58..927e134 100644
+--- a/webview-ui/src/components/welcome/SuggestedTasks.tsx
++++ b/webview-ui/src/components/welcome/SuggestedTasks.tsx
+@@ -14,7 +14,7 @@ export const SuggestedTasks: React.FC<{ shouldShowQuickWins: boolean }> = ({ sho
+ 			<div className="px-4 pt-1 pb-3 select-none">
+ 				{" "}
+ 				<h2 className="text-sm font-medium mb-2.5 text-center text-gray">
+-					Quick <span className="text-white">[Wins]</span> with Cline
++					Quick <span className="text-white">[Wins]</span> with Resonance
+ 				</h2>
+ 				<div className="flex flex-col space-y-1">
+ 					{" "}
+diff --git a/webview-ui/src/components/welcome/WelcomeView.tsx b/webview-ui/src/components/welcome/WelcomeView.tsx
+index 69cc16b..52f6b06 100644
+--- a/webview-ui/src/components/welcome/WelcomeView.tsx
++++ b/webview-ui/src/components/welcome/WelcomeView.tsx
+@@ -1,5 +1,5 @@
+ import { BooleanRequest, EmptyRequest } from "@shared/proto/cline/common"
+-import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
++import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+ import { memo, useEffect, useState } from "react"
+ import ClineLogoWhite from "@/assets/ClineLogoWhite"
+ import ApiOptions from "@/components/settings/ApiOptions"
+@@ -39,18 +39,14 @@ const WelcomeView = memo(() => {
+ 	return (
+ 		<div className="fixed inset-0 p-0 flex flex-col">
+ 			<div className="h-full px-5 overflow-auto flex flex-col gap-2.5">
+-				<h2 className="text-lg font-semibold">Hi, I'm Cline</h2>
++				<h2 className="text-lg font-semibold">Hi, I'm Resonance</h2>
+ 				<div className="flex justify-center my-5">
+ 					<ClineLogoWhite className="size-16" />
+ 				</div>
+ 				<p>
+-					I can do all kinds of tasks thanks to breakthroughs in{" "}
+-					<VSCodeLink className="inline" href="https://www.anthropic.com/claude/sonnet">
+-						Claude 4 Sonnet's
+-					</VSCodeLink>
+-					agentic coding capabilities and access to tools that let me create & edit files, explore complex projects, use
+-					a browser, and execute terminal commands <i>(with your permission, of course)</i>. I can even use MCP to
+-					create new tools and extend my own capabilities.
++					I'm your project management assistant with persistent memory. I help organize work,
++					track progress across sessions, and manage knowledge — all while maintaining state in
++					the <code>.resonance/</code> directory.
+ 				</p>
+ 
+ 				<p className="text-(--vscode-descriptionForeground)">
