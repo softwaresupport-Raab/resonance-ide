@@ -1,0 +1,163 @@
+diff --git a/cli/src/components/ChatView.test.tsx b/cli/src/components/ChatView.test.tsx
+index 8b42ea6..cea0e2f 100644
+--- a/cli/src/components/ChatView.test.tsx
++++ b/cli/src/components/ChatView.test.tsx
+@@ -297,8 +297,8 @@ describe("ChatView UI State During Exit", () => {
+ 		const onExit = createExitMock()
+ 		const { lastFrame } = render(<ChatView onExit={onExit} />)
+ 
+-		// Footer contains auto-approve toggle
+-		expect(lastFrame()).toContain("Auto-approve")
++		// Footer contains help and mode context
++		expect(lastFrame()).toContain("@ for files")
+ 		expect(lastFrame()).toContain("What can I do for you?")
+ 		expect(lastFrame()).toContain("Input:")
+ 
+@@ -311,7 +311,7 @@ describe("ChatView UI State During Exit", () => {
+ 		// Static content should still be present
+ 		expect(frameAfter).toContain("What can I do for you?")
+ 		// Footer should still be present (only input is hidden)
+-		expect(frameAfter).toContain("Auto-approve")
++		expect(frameAfter).toContain("@ for files")
+ 		// Input should be hidden
+ 		expect(frameAfter).not.toContain("Input:")
+ 	})
+diff --git a/cli/src/components/ChatView.tsx b/cli/src/components/ChatView.tsx
+index 60faa42..2a0bdf1 100644
+--- a/cli/src/components/ChatView.tsx
++++ b/cli/src/components/ChatView.tsx
+@@ -429,9 +429,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
+ 	})
+ 
+ 	const [yolo, _setYolo] = useState<boolean>(() => StateManager.get().getGlobalSettingsKey("yoloModeToggled") ?? false)
+-	const [autoApproveAll, setAutoApproveAll] = useState<boolean>(
+-		() => StateManager.get().getGlobalSettingsKey("autoApproveAllToggled") ?? false,
+-	)
+ 
+ 	// Sync mode from core state updates (e.g. yolo auto-switching plan to act)
+ 	useEffect(() => {
+@@ -440,12 +437,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
+ 		}
+ 	}, [taskState.mode])
+ 
+-	const toggleAutoApproveAll = useCallback(() => {
+-		const newValue = !autoApproveAll
+-		setAutoApproveAll(newValue)
+-		StateManager.get().setGlobalState("autoApproveAllToggled", newValue)
+-	}, [autoApproveAll])
+-
+ 	// Get provider based on current mode (computed first since modelId depends on it)
+ 	const provider = useMemo(() => {
+ 		const stateManager = StateManager.get()
+@@ -1324,10 +1315,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
+ 		}
+ 
+ 		// 12. Normal input handling
+-		if (key.shift && key.tab) {
+-			toggleAutoApproveAll()
+-			return
+-		}
+ 		if (key.tab && !mentionInfo.inMentionMode && !slashInfo.inSlashMode) {
+ 			toggleMode()
+ 			return
+@@ -1582,17 +1569,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
+ 							</Text>
+ 						</Box>
+ 
+-						{/* Row 4: Auto-approve toggle */}
+-						<Box paddingLeft={1} paddingRight={1}>
+-							{autoApproveAll ? (
+-								<Text>
+-									<Text color="green">⏵⏵ Auto-approve all enabled</Text>
+-									<Text color="gray"> (Shift+Tab)</Text>
+-								</Text>
+-							) : (
+-								<Text color="gray">Auto-approve all disabled (Shift+Tab)</Text>
+-							)}
+-						</Box>
+ 					</Box>
+ 				)}
+ 			</Box>
+diff --git a/cli/src/components/SettingsPanelContent.tsx b/cli/src/components/SettingsPanelContent.tsx
+index af47d46..0da3e59 100644
+--- a/cli/src/components/SettingsPanelContent.tsx
++++ b/cli/src/components/SettingsPanelContent.tsx
+@@ -170,6 +170,9 @@ export const SettingsPanelContent: React.FC<SettingsPanelContentProps> = ({
+ 	const [autoApproveSettings, setAutoApproveSettings] = useState<AutoApprovalSettings>(() => {
+ 		return stateManager.getGlobalSettingsKey("autoApprovalSettings") ?? DEFAULT_AUTO_APPROVAL_SETTINGS
+ 	})
++	const [autoApproveAll, setAutoApproveAll] = useState<boolean>(
++		() => stateManager.getGlobalSettingsKey("autoApproveAllToggled") ?? false,
++	)
+ 
+ 	// Other tab state
+ 	const [preferredLanguage, setPreferredLanguage] = useState<string>(
+@@ -480,6 +483,15 @@ export const SettingsPanelContent: React.FC<SettingsPanelContentProps> = ({
+ 				const result: ListItem[] = []
+ 				const actions = autoApproveSettings.actions
+ 
++				result.push({
++					key: "autoApproveAllToggled",
++					label: "Auto-approve everything",
++					type: "checkbox",
++					value: autoApproveAll,
++					description: "Bypass all approval prompts for tools and actions",
++				})
++				result.push({ key: "separator-all", label: "", type: "separator", value: false })
++
+ 				// Helper to add parent/child checkbox pairs
+ 				const addActionPair = (
+ 					parentKey: string,
+@@ -630,6 +642,7 @@ export const SettingsPanelContent: React.FC<SettingsPanelContentProps> = ({
+ 		actThinkingEnabled,
+ 		planThinkingEnabled,
+ 		autoApproveSettings,
++		autoApproveAll,
+ 		features,
+ 		preferredLanguage,
+ 		telemetry,
+@@ -784,6 +797,12 @@ export const SettingsPanelContent: React.FC<SettingsPanelContentProps> = ({
+ 		}
+ 
+ 		// Auto-approve actions
++		if (item.key === "autoApproveAllToggled") {
++			setAutoApproveAll(newValue)
++			stateManager.setGlobalState("autoApproveAllToggled", newValue)
++			return
++		}
++
+ 		if (item.key === "enableNotifications") {
+ 			const newSettings = {
+ 				...autoApproveSettings,
+diff --git a/src/core/controller/index.ts b/src/core/controller/index.ts
+index d9c4f54..c7e3562 100644
+--- a/src/core/controller/index.ts
++++ b/src/core/controller/index.ts
+@@ -860,6 +860,7 @@ export class Controller {
+ 		const mode = this.stateManager.getGlobalSettingsKey("mode")
+ 		const strictPlanModeEnabled = this.stateManager.getGlobalSettingsKey("strictPlanModeEnabled")
+ 		const yoloModeToggled = this.stateManager.getGlobalSettingsKey("yoloModeToggled")
++		const autoApproveAllToggled = this.stateManager.getGlobalSettingsKey("autoApproveAllToggled")
+ 		const useAutoCondense = this.stateManager.getGlobalSettingsKey("useAutoCondense")
+ 		const userInfo = this.stateManager.getGlobalStateKey("userInfo")
+ 		const mcpMarketplaceEnabled = this.stateManager.getGlobalStateKey("mcpMarketplaceEnabled")
+@@ -945,6 +946,7 @@ export class Controller {
+ 			mode,
+ 			strictPlanModeEnabled,
+ 			yoloModeToggled,
++			autoApproveAllToggled,
+ 			useAutoCondense,
+ 			userInfo,
+ 			mcpMarketplaceEnabled,
+diff --git a/src/shared/ExtensionMessage.ts b/src/shared/ExtensionMessage.ts
+index b339461..f19d060 100644
+--- a/src/shared/ExtensionMessage.ts
++++ b/src/shared/ExtensionMessage.ts
+@@ -87,6 +87,7 @@ export interface ExtensionState {
+ 	mcpResponsesCollapsed?: boolean
+ 	strictPlanModeEnabled?: boolean
+ 	yoloModeToggled?: boolean
++	autoApproveAllToggled?: boolean
+ 	useAutoCondense?: boolean
+ 	clineWebToolsEnabled?: ClineFeatureSetting
+ 	worktreesEnabled?: ClineFeatureSetting

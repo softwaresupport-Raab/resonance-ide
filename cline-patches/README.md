@@ -82,6 +82,67 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 **Files modified:**
 - `src/core/task/index.ts`
 
+### 007-auto-focus-sidebar.patch
+**Auto-focus Sidebar on Startup**
+- Automatically focuses the Resonance sidebar when the extension activates
+
+**Files modified:**
+- `src/extension.ts`
+
+### 008-resonance-commands.patch
+**Resonance Command Palette**
+- Adds custom Resonance-specific slash commands and command palette actions
+
+**Files modified:**
+- `src/core/prompts/commands.ts`
+- `src/core/slash-commands/index.ts`
+- `src/shared/slashCommands.ts`
+- `webview-ui/src/utils/slash-commands.ts`
+- `webview-ui/vite.config.ts`
+
+### 009-uncaptured-branding.patch
+**Remaining Branding Cleanup**
+- Fixes all remaining "Cline" strings across settings, history, welcome, and modals
+
+**Files modified:**
+- `proto/cline/account.proto`
+- `webview-ui/src/components/chat/ChatTextArea.tsx`
+- `webview-ui/src/components/chat/ErrorRow.tsx`
+- `webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx`
+- `webview-ui/src/components/common/TelemetryBanner.tsx`
+- `webview-ui/src/components/common/WhatsNewModal.tsx`
+- `webview-ui/src/components/settings/ClineAccountInfoCard.tsx`
+- `webview-ui/src/components/settings/SettingsView.tsx`
+- `webview-ui/src/components/settings/sections/AboutSection.tsx`
+- `webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx`
+- `webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx`
+- `webview-ui/src/components/welcome/SuggestedTasks.tsx`
+- `webview-ui/src/components/welcome/WelcomeView.tsx`
+
+### 010-codicon-font-path-fix.patch
+**Codicon Font Path Fix**
+- Fixes codicon font path resolution in the webview
+
+**Files modified:**
+- `webview-ui/vite.config.ts` (font path alias)
+
+### 011-auto-approve-settings.patch
+**Auto-approve Controls Moved to Settings**
+- Removes the auto-approve footer bar from the chat view (both webview and CLI)
+- Adds a dedicated **Auto-approve** section to Settings → Features with:
+  - Master "Auto-approve Everything" toggle
+  - Granular per-action toggles: Read Files, Edit Files, Execute Commands, Browser, MCP
+  - Sub-action toggles for each (e.g. Read External Files, Execute All Commands)
+  - Notifications toggle
+- Fixes state propagation: `autoApproveAllToggled` included in `getStateToPostToWebview()`
+
+**Files modified:**
+- `cli/src/components/ChatView.tsx`
+- `cli/src/components/ChatView.test.tsx`
+- `cli/src/components/SettingsPanelContent.tsx`
+- `src/core/controller/index.ts`
+- `src/shared/ExtensionMessage.ts`
+
 ## Quick Start
 
 ### Build Process
@@ -97,9 +158,15 @@ git apply ../cline-patches/002-ui-branding.patch
 git apply ../cline-patches/002-scroll-behavior-fix.patch
 git apply ../cline-patches/003-deep-branding.patch
 git apply ../cline-patches/003-thinking-indicator.patch
+git apply ../cline-patches/003b-thinking-indicator-file.patch
 git apply ../cline-patches/004-resonance-defaults.patch
 git apply ../cline-patches/005-hide-cost-display.patch
 git apply ../cline-patches/006-preflight-parallelization.patch
+git apply ../cline-patches/007-auto-focus-sidebar.patch
+git apply ../cline-patches/008-resonance-commands.patch
+git apply ../cline-patches/009-uncaptured-branding.patch
+git apply ../cline-patches/010-codicon-font-path-fix.patch
+git apply ../cline-patches/011-auto-approve-settings.patch
 
 # 3. Install dependencies
 npm install

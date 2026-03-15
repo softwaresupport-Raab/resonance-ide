@@ -53,7 +53,7 @@ index 50540f2..35ba960 100644
  	defaultTerminalProfile: { default: "default" as string },
  	terminalOutputLineLimit: { default: 500 as number },
 diff --git a/webview-ui/src/context/ExtensionStateContext.tsx b/webview-ui/src/context/ExtensionStateContext.tsx
-index 865f534..70ccc86 100644
+index 865f534..af85628 100644
 --- a/webview-ui/src/context/ExtensionStateContext.tsx
 +++ b/webview-ui/src/context/ExtensionStateContext.tsx
 @@ -248,7 +248,7 @@ export const ExtensionStateContextProvider: React.FC<{
@@ -65,3 +65,11 @@ index 865f534..70ccc86 100644
  		mcpDisplayMode: DEFAULT_MCP_DISPLAY_MODE,
  		globalClineRulesToggles: {},
  		localClineRulesToggles: {},
+@@ -270,6 +270,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 		mcpResponsesCollapsed: false, // Default value (expanded), will be overwritten by extension state
+ 		strictPlanModeEnabled: false,
+ 		yoloModeToggled: false,
++		autoApproveAllToggled: false,
+ 		customPrompt: undefined,
+ 		useAutoCondense: false,
+ 		clineWebToolsEnabled: { user: true, featureFlag: false },

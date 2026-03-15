@@ -322,10 +322,25 @@ index 6e84d53..84d8512 100644
  						execute terminal commands (after you grant permission).
  					</p>
 diff --git a/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx b/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
-index 0d1be6b..ff563cc 100644
+index 0d1be6b..4edcb39 100644
 --- a/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
 +++ b/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
-@@ -90,7 +90,7 @@ const editorFeatures: FeatureToggle[] = [
+@@ -1,4 +1,4 @@
+-import { UpdateSettingsRequest } from "@shared/proto/cline/state"
++import { UpdateSettingsRequest, UpdateSettingsRequestCli } from "@shared/proto/cline/state"
+ import { EmptyRequest } from "@shared/proto/index.cline"
+ import { OpenaiReasoningEffort } from "@shared/storage/types"
+ import { AlertCircleIcon } from "lucide-react"
+@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+ import { Switch } from "@/components/ui/switch"
+ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
++import { ACTION_METADATA } from "@/components/chat/auto-approve-menu/constants"
++import { useAutoApproveActions } from "@/hooks/useAutoApproveActions"
+ import { PLATFORM_CONFIG, PlatformType } from "@/config/platform.config"
+ import { useExtensionState } from "@/context/ExtensionStateContext"
+ import { StateServiceClient } from "@/services/grpc-client"
+@@ -90,7 +92,7 @@ const editorFeatures: FeatureToggle[] = [
  	},
  	{
  		id: "cline-web-tools",
@@ -334,7 +349,7 @@ index 0d1be6b..ff563cc 100644
  		description: "Access web browsing and search capabilities",
  		stateKey: "clineWebToolsEnabled",
  		settingKey: "clineWebToolsEnabled",
-@@ -98,7 +98,7 @@ const editorFeatures: FeatureToggle[] = [
+@@ -98,7 +100,7 @@ const editorFeatures: FeatureToggle[] = [
  	{
  		id: "worktrees",
  		label: "Worktrees",
@@ -343,7 +358,108 @@ index 0d1be6b..ff563cc 100644
  		stateKey: "worktreesEnabled",
  		settingKey: "worktreesEnabled",
  	},
-@@ -348,7 +348,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+@@ -192,6 +194,8 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 		strictPlanModeEnabled,
+ 		yoloModeToggled,
+ 		useAutoCondense,
++		autoApproveAllToggled,
++		autoApprovalSettings,
+ 		clineWebToolsEnabled,
+ 		worktreesEnabled,
+ 		focusChainSettings,
+@@ -240,8 +244,23 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 		[focusChainSettings],
+ 	)
+ 
++	const handleAutoApproveAllChange = useCallback((checked: boolean) => {
++		StateServiceClient.updateSettingsCli(
++			UpdateSettingsRequestCli.create({
++				settings: {
++					autoApproveAllToggled: checked,
++				},
++			}),
++		).catch((error) => {
++			console.error("Failed to update autoApproveAllToggled:", error)
++		})
++	}, [])
++
++	const { isChecked: isAutoApproveActionChecked, updateAction: updateAutoApproveAction } = useAutoApproveActions()
++
+ 	const showSubagents = isMacOSOrLinux() && PLATFORM_CONFIG.type === PlatformType.VSCODE
+ 	const isYoloRemoteLocked = remoteConfigSettings?.yoloModeToggled !== undefined
++	const isAutoApproveAllRemoteLocked = remoteConfigSettings?.autoApproveAllToggled !== undefined
+ 
+ 	// State lookup for mapped features
+ 	const featureState: Record<string, boolean | undefined> = {
+@@ -254,6 +273,9 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 		worktreesEnabled: worktreesEnabled?.user,
+ 		enableParallelToolCalling,
+ 		backgroundEditEnabled,
++		autoApproveAllToggled: isAutoApproveAllRemoteLocked
++			? remoteConfigSettings?.autoApproveAllToggled
++			: autoApproveAllToggled,
+ 		yoloModeToggled: isYoloRemoteLocked ? remoteConfigSettings?.yoloModeToggled : yoloModeToggled,
+ 	}
+ 
+@@ -305,6 +327,57 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 						</div>
+ 					</div>
+ 
++					{/* Auto-approve */}
++					<div>
++						<div className="text-xs font-medium text-foreground/80 uppercase tracking-wider mb-3">Auto-approve</div>
++						<div
++							className="relative p-3 pt-0 my-3 rounded-md border border-editor-widget-border/50"
++							id="auto-approve-features">
++							<FeatureRow
++								checked={featureState.autoApproveAllToggled}
++								description="Bypass all approval prompts for tools and actions."
++								disabled={isAutoApproveAllRemoteLocked}
++								isRemoteLocked={isAutoApproveAllRemoteLocked}
++								label="Auto-approve Everything"
++								onChange={handleAutoApproveAllChange}
++								remoteTooltip="This setting is managed by your organization's remote configuration"
++							/>
++							{!featureState.autoApproveAllToggled && (
++								<>
++									<div className="border-t border-editor-widget-border/30 my-1" />
++									<p className="text-xs text-muted-foreground mb-1">Or pick individual actions to auto-approve:</p>
++									{ACTION_METADATA.map((action) => (
++										<div key={action.id}>
++											<FeatureRow
++												checked={isAutoApproveActionChecked(action)}
++												description=""
++												label={action.label}
++												onChange={(checked) => updateAutoApproveAction(action, checked)}
++											/>
++											{action.subAction && (
++												<div className="pl-6">
++													<FeatureRow
++														checked={isAutoApproveActionChecked(action.subAction)}
++														description=""
++														label={action.subAction.label}
++														onChange={(checked) => updateAutoApproveAction(action.subAction!, checked)}
++													/>
++												</div>
++											)}
++										</div>
++									))}
++									<div className="border-t border-editor-widget-border/30 my-1" />
++									<FeatureRow
++										checked={autoApprovalSettings.enableNotifications}
++										description=""
++										label="Enable notifications"
++										onChange={(checked) => updateAutoApproveAction({ id: "enableNotifications", label: "Enable notifications", shortName: "Notifications", icon: "" }, checked)}
++									/>
++								</>
++							)}
++						</div>
++					</div>
++
+ 					{/* Optional features */}
+ 					<div>
+ 						<div className="text-xs font-medium text-foreground/80 uppercase tracking-wider mb-3">Editor</div>
+@@ -348,7 +421,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
  												Cline CLI is required for subagents. Install it with
  												<code className="px-1">npm install -g cline</code>, then run
  												<code className="px-1">cline auth</code>
