@@ -1,0 +1,706 @@
+diff --git a/cli/src/components/WelcomeView.tsx b/cli/src/components/WelcomeView.tsx
+index 7ba6f4e..abe097b 100644
+--- a/cli/src/components/WelcomeView.tsx
++++ b/cli/src/components/WelcomeView.tsx
+@@ -5,7 +5,7 @@
+  */
+ 
+ import { Box, Text, useInput } from "ink"
+-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
++import React, { useEffect, useMemo, useRef, useState } from "react"
+ import { StateManager } from "@/core/storage/StateManager"
+ import type { ApiProvider } from "@/shared/api"
+ import { getProviderDefaultModelId, getProviderModelIdKey, Mode, SettingsKey } from "@/shared/storage"
+@@ -29,26 +29,6 @@ interface WelcomeViewProps {
+ 	controller?: any
+ }
+ 
+-// ASCII art Cline logo
+-const CLINE_LOGO = [
+-	"            :::::::            ",
+-	"           :::::::::           ",
+-	"       :::::::::::::::::       ",
+-	"    :::::::::::::::::::::::    ",
+-	"   :::::::::::::::::::::::::   ",
+-	"  :::::::::::::::::::::::::::  ",
+-	"  :::::::   :::::::   :::::::  ",
+-	" :::::::     :::::     ::::::: ",
+-	"::::::::     :::::     ::::::::",
+-	"::::::::     :::::     ::::::::",
+-	" :::::::     :::::     ::::::: ",
+-	"  :::::::   :::::::   :::::::  ",
+-	"  :::::::::::::::::::::::::::  ",
+-	"   :::::::::::::::::::::::::   ",
+-	"    :::::::::::::::::::::::    ",
+-	"       ::::::::::::::::       ",
+-]
+-
+ const SEARCH_DEBOUNCE_MS = 150
+ const RIPGREP_WARNING_DURATION_MS = 5000
+ const MAX_SEARCH_RESULTS = 15
+@@ -61,7 +41,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onSubmit, onExit, cont
+ 	const [isSearching, setIsSearching] = useState(false)
+ 	const [showRipgrepWarning, setShowRipgrepWarning] = useState(false)
+ 	const [escPressedOnce, setEscPressedOnce] = useState(false)
+-	const [mode, setMode] = useState<Mode>(() => {
++	const [mode] = useState<Mode>(() => {
+ 		const stateManager = StateManager.get()
+ 		return stateManager.getGlobalSettingsKey("mode") || "act"
+ 	})
+@@ -85,13 +65,6 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onSubmit, onExit, cont
+ 		)
+ 	}, [mode, provider])
+ 
+-	const toggleMode = useCallback(() => {
+-		const newMode: Mode = mode === "act" ? "plan" : "act"
+-		setMode(newMode)
+-		const stateManager = StateManager.get()
+-		stateManager.setGlobalState("mode", newMode)
+-	}, [mode])
+-
+ 	const refs = useRef({
+ 		searchTimeout: null as NodeJS.Timeout | null,
+ 		lastQuery: "",
+@@ -203,10 +176,6 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onSubmit, onExit, cont
+ 			}
+ 
+ 			// Normal input handling
+-			if (key.tab && !mentionInfo.inMentionMode) {
+-				toggleMode()
+-				return
+-			}
+ 			if (key.return && !mentionInfo.inMentionMode) {
+ 				if (prompt.trim() || imagePaths.length > 0) {
+ 					onSubmit(prompt.trim(), imagePaths)
+@@ -234,7 +203,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onSubmit, onExit, cont
+ 		{ isActive: isRawModeSupported },
+ 	)
+ 
+-	const borderColor = mode === "act" ? "blue" : "yellow"
++	const borderColor = "blue"
+ 
+ 	return (
+ 		<Box flexDirection="column" width="100%">
+@@ -245,16 +214,6 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onSubmit, onExit, cont
+ 				</Box>
+ 			)}
+ 
+-			{/* Cline logo - centered */}
+-			<Box alignItems="center" flexDirection="column">
+-				{CLINE_LOGO.map((line, idx) => (
+-					// biome-ignore lint/suspicious/noArrayIndexKey: static array that never changes
+-					<Text color="white" key={idx}>
+-						{line}
+-					</Text>
+-				))}
+-			</Box>
+-
+ 			{/* Main prompt - centered, bold */}
+ 			<Box justifyContent="center" marginTop={1}>
+ 				<Text bold color="white">
+@@ -283,25 +242,9 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onSubmit, onExit, cont
+ 				<Text inverse> </Text>
+ 			</Box>
+ 
+-			{/* Model ID and Mode toggle row */}
+-			<Box justifyContent="space-between" width="100%">
+-				{/* Model ID on left */}
++			{/* Current model */}
++			<Box width="100%">
+ 				<Text color="gray">{modelId}</Text>
+-
+-				{/* Mode toggle on right */}
+-				<Box gap={1}>
+-					<Box>
+-						<Text bold={mode === "plan"} color={mode === "plan" ? "yellow" : "gray"}>
+-							{mode === "plan" ? "●" : "○"} Plan
+-						</Text>
+-					</Box>
+-					<Box>
+-						<Text bold={mode === "act"} color={mode === "act" ? "blue" : "gray"}>
+-							{mode === "act" ? "●" : "○"} Act
+-						</Text>
+-					</Box>
+-					<Text color="gray">(Tab)</Text>
+-				</Box>
+ 			</Box>
+ 
+ 			{/* File mention menu - below input */}
+diff --git a/package.json b/package.json
+index 6431449..5b4349a 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+-	"name": "claude-dev",
+-	"displayName": "Cline",
+-	"description": "Autonomous coding agent right in your IDE, capable of creating/editing files, running commands, using the browser, and more with your permission every step of the way.",
++	"name": "resonance",
++	"displayName": "Resonance",
++	"description": "Your project management assistant with persistent memory. Maintains state across sessions, organizes work packages, and helps with knowledge management.",
+ 	"version": "3.57.1",
+ 	"icon": "assets/icons/icon.png",
+ 	"workspaces": [
+@@ -11,15 +11,15 @@
+ 		"vscode": "^1.84.0"
+ 	},
+ 	"author": {
+-		"name": "Cline Bot Inc."
++		"name": "Resonance Team"
+ 	},
+ 	"license": "Apache-2.0",
+-	"publisher": "saoudrizwan",
++	"publisher": "resonance-team",
+ 	"repository": {
+ 		"type": "git",
+-		"url": "https://github.com/cline/cline"
++		"url": "https://github.com/resonance/resonance"
+ 	},
+-	"homepage": "https://cline.bot",
++	"homepage": "https://resonance.app",
+ 	"categories": [
+ 		"AI",
+ 		"Chat",
+@@ -29,18 +29,18 @@
+ 		"Testing"
+ 	],
+ 	"keywords": [
+-		"cline",
+-		"claude",
+-		"dev",
++		"resonance",
++		"project-management",
++		"state-machine",
++		"memory",
+ 		"mcp",
+-		"openrouter",
+-		"coding",
+-		"agent",
+-		"autonomous",
+-		"chatgpt",
+-		"sonnet",
++		"work-packages",
++		"knowledge-management",
++		"ai-assistant",
++		"persistent-memory",
++		"task-management",
+ 		"ai",
+-		"llama"
++		"assistant"
+ 	],
+ 	"activationEvents": [
+ 		"onLanguage",
+@@ -60,46 +60,46 @@
+ 		},
+ 		"walkthroughs": [
+ 			{
+-				"id": "ClineWalkthrough",
+-				"title": "Meet Cline, your new coding partner",
+-				"description": "Cline codes like a developer because it thinks like one. Here are 5 ways to put it to work:",
++				"id": "ResonanceWalkthrough",
++				"title": "Meet Resonance, your project management assistant",
++				"description": "Resonance maintains state across sessions using persistent memory. Here are 5 key concepts:",
+ 				"steps": [
+ 					{
+ 						"id": "welcome",
+-						"title": "Start with a Goal, Not Just a Prompt",
+-						"description": "Tell Cline what you want to achieve. It plans, asks, and then codes, like a true partner.",
++						"title": "You're a State Machine, Not a Chatbot",
++						"description": "Resonance maintains persistent memory in .resonance/ directory across all sessions.",
+ 						"media": {
+ 							"markdown": "walkthrough/step1.md"
+ 						}
+ 					},
+ 					{
+-						"id": "learn",
+-						"title": "Let Cline Learn Your Codebase",
+-						"description": "Point Cline to your project. It builds understanding to make smart, context-aware changes.",
++						"id": "memory",
++						"title": "Persistent Memory System",
++						"description": "Every session reads 01_state.md to understand current work package, goals, and next steps.",
+ 						"media": {
+ 							"markdown": "walkthrough/step2.md"
+ 						}
+ 					},
+ 					{
+-						"id": "advanced-features",
+-						"title": "Always Use the Best AI Models",
+-						"description": "Cline empowers you with State-of-the-Art AI, connecting to top models (Anthropic, Gemini, OpenAI & more).",
++						"id": "synch-rule",
++						"title": "The Synch Rule: Micro vs Macro",
++						"description": "Micro-tasks stay in chat. Only update 01_state.md when reaching milestones.",
+ 						"media": {
+ 							"markdown": "walkthrough/step3.md"
+ 						}
+ 					},
+ 					{
+-						"id": "mcp",
+-						"title": "Extend with Powerful Tools (MCP)",
+-						"description": "Connect to databases, APIs, or discover new capabilities in the MCP Marketplace.",
++						"id": "knowledge",
++						"title": "Knowledge Management",
++						"description": "Use docs/ for permanent documentation, 03_backlog.md for quick TODOs.",
+ 						"media": {
+ 							"markdown": "walkthrough/step4.md"
+ 						}
+ 					},
+ 					{
+-						"id": "getting-started",
++						"id": "control",
+ 						"title": "You're Always in Control",
+-						"description": "Review Cline's plans and diffs. Approve changes before they happen. No surprises.",
++						"description": "Review plans and changes. Bring your own API keys. Full transparency.",
+ 						"media": {
+ 							"markdown": "walkthrough/step5.md"
+ 						},
+@@ -111,19 +111,19 @@
+ 			}
+ 		],
+ 		"viewsContainers": {
+-			"activitybar": [
++			"secondarySidebar": [
+ 				{
+-					"id": "claude-dev-ActivityBar",
+-					"title": "Cline",
++					"id": "resonance-ActivityBar",
++					"title": "Resonance",
+ 					"icon": "assets/icons/icon.svg"
+ 				}
+ 			]
+ 		},
+ 		"views": {
+-			"claude-dev-ActivityBar": [
++			"resonance-ActivityBar": [
+ 				{
+ 					"type": "webview",
+-					"id": "claude-dev.SidebarProvider",
++					"id": "resonance.SidebarProvider",
+ 					"name": "",
+ 					"icon": "assets/icons/icon.svg"
+ 				}
+@@ -158,90 +158,90 @@
+ 			{
+ 				"command": "cline.dev.createTestTasks",
+ 				"title": "Create Test Tasks",
+-				"category": "Cline",
++				"category": "Resonance",
+ 				"when": "cline.isDevMode"
+ 			},
+ 			{
+ 				"command": "cline.dev.expireMcpOAuthTokens",
+ 				"title": "Expire MCP OAuth Tokens (for testing)",
+-				"category": "Cline",
++				"category": "Resonance",
+ 				"when": "cline.isDevMode"
+ 			},
+ 			{
+ 				"command": "cline.addToChat",
+-				"title": "Add to Cline",
+-				"category": "Cline"
++				"title": "Add to Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.addTerminalOutputToChat",
+-				"title": "Add to Cline",
+-				"category": "Cline"
++				"title": "Add to Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.focusChatInput",
+ 				"title": "Jump to Chat Input",
+-				"category": "Cline"
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.generateGitCommitMessage",
+-				"title": "Generate Commit Message with Cline",
+-				"category": "Cline",
++				"title": "Generate Commit Message with Resonance",
++				"category": "Resonance",
+ 				"icon": "$(cline-icon)"
+ 			},
+ 			{
+ 				"command": "cline.abortGitCommitMessage",
+-				"title": "Generate Commit Message with Cline - Stop",
+-				"category": "Cline",
++				"title": "Generate Commit Message with Resonance - Stop",
++				"category": "Resonance",
+ 				"icon": "$(debug-stop)"
+ 			},
+ 			{
+ 				"command": "cline.explainCode",
+-				"title": "Explain with Cline",
+-				"category": "Cline"
++				"title": "Explain with Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.improveCode",
+-				"title": "Improve with Cline",
+-				"category": "Cline"
++				"title": "Improve with Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.jupyterGenerateCell",
+-				"title": "Generate Jupyter Cell with Cline",
+-				"category": "Cline",
++				"title": "Generate Jupyter Cell with Resonance",
++				"category": "Resonance",
+ 				"icon": "$(sparkle)"
+ 			},
+ 			{
+ 				"command": "cline.jupyterExplainCell",
+-				"title": "Explain Jupyter Cell with Cline",
+-				"category": "Cline",
++				"title": "Explain Jupyter Cell with Resonance",
++				"category": "Resonance",
+ 				"icon": "$(question)"
+ 			},
+ 			{
+ 				"command": "cline.jupyterImproveCell",
+-				"title": "Improve Jupyter Cell with Cline",
+-				"category": "Cline",
++				"title": "Improve Jupyter Cell with Resonance",
++				"category": "Resonance",
+ 				"icon": "$(lightbulb)"
+ 			},
+ 			{
+ 				"command": "cline.openWalkthrough",
+ 				"title": "Open Walkthrough",
+-				"category": "Cline"
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.reconstructTaskHistory",
+ 				"title": "Reconstruct Task History",
+-				"category": "Cline"
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.reviewComment.reply",
+ 				"title": "Reply",
+-				"category": "Cline",
++				"category": "Resonance",
+ 				"enablement": "!commentIsEmpty"
+ 			},
+ 			{
+ 				"command": "cline.reviewComment.addToChat",
+-				"title": "Add to Cline Chat",
+-				"category": "Cline",
++				"title": "Add to Resonance Chat",
++				"category": "Resonance",
+ 				"icon": "$(link-external)"
+ 			}
+ 		],
+@@ -277,27 +277,17 @@
+ 				{
+ 					"command": "cline.plusButtonClicked",
+ 					"group": "navigation@1",
+-					"when": "view == claude-dev.SidebarProvider"
+-				},
+-				{
+-					"command": "cline.mcpButtonClicked",
+-					"group": "navigation@2",
+-					"when": "view == claude-dev.SidebarProvider"
++					"when": "view == resonance.SidebarProvider"
+ 				},
+ 				{
+ 					"command": "cline.historyButtonClicked",
+-					"group": "navigation@3",
+-					"when": "view == claude-dev.SidebarProvider"
+-				},
+-				{
+-					"command": "cline.accountButtonClicked",
+-					"group": "navigation@5",
+-					"when": "view == claude-dev.SidebarProvider"
++					"group": "navigation@2",
++					"when": "view == resonance.SidebarProvider"
+ 				},
+ 				{
+ 					"command": "cline.settingsButtonClicked",
+-					"group": "navigation@6",
+-					"when": "view == claude-dev.SidebarProvider"
++					"group": "navigation@3",
++					"when": "view == resonance.SidebarProvider"
+ 				}
+ 			],
+ 			"editor/context": [
+@@ -374,7 +364,7 @@
+ 			]
+ 		},
+ 		"configuration": {
+-			"title": "Cline",
++			"title": "Resonance",
+ 			"properties": {}
+ 		}
+ 	},
+diff --git a/webview-ui/src/components/chat/ChatTextArea.tsx b/webview-ui/src/components/chat/ChatTextArea.tsx
+index e5cd9ee..6c4f777 100644
+--- a/webview-ui/src/components/chat/ChatTextArea.tsx
++++ b/webview-ui/src/components/chat/ChatTextArea.tsx
+@@ -6,7 +6,6 @@ import { UpdateApiConfigurationRequest } from "@shared/proto/cline/models"
+ import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/cline/state"
+ import { convertApiConfigurationToProto } from "@shared/proto-conversions/models/api-configuration-conversion"
+ import { type SlashCommand } from "@shared/slashCommands"
+-import { Mode } from "@shared/storage/types"
+ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+ import { AtSignIcon, PlusIcon } from "lucide-react"
+ import type React from "react"
+@@ -101,33 +100,6 @@ interface GitCommit {
+ }
+ 
+ const PLAN_MODE_COLOR = "var(--vscode-activityWarningBadge-background)"
+-const ACT_MODE_COLOR = "var(--vscode-focusBorder)"
+-
+-const SwitchContainer = styled.div<{ disabled: boolean }>`
+-	display: flex;
+-	align-items: center;
+-	background-color: transparent;
+-	border: 1px solid var(--vscode-input-border);
+-	border-radius: 12px;
+-	overflow: hidden;
+-	cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
+-	opacity: ${(props) => (props.disabled ? 0.5 : 1)};
+-	transform: scale(1);
+-	transform-origin: right center;
+-	margin-left: 0;
+-	user-select: none; // Prevent text selection
+-`
+-
+-const Slider = styled.div.withConfig({
+-	shouldForwardProp: (prop) => !["isAct", "isPlan"].includes(prop),
+-})<{ isAct: boolean; isPlan?: boolean }>`
+-	position: absolute;
+-	height: 100%;
+-	width: 50%;
+-	background-color: ${(props) => (props.isPlan ? PLAN_MODE_COLOR : ACT_MODE_COLOR)};
+-	transition: transform 0.2s ease;
+-	transform: translateX(${(props) => (props.isAct ? "100%" : "0%")});
+-`
+ 
+ const ButtonGroup = styled.div`
+ 	display: flex;
+@@ -305,7 +277,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 		const buttonRef = useRef<HTMLDivElement>(null)
+ 		const [arrowPosition, setArrowPosition] = useState(0)
+ 		const [menuPosition, setMenuPosition] = useState(0)
+-		const [shownTooltipMode, setShownTooltipMode] = useState<Mode | null>(null)
+ 		const [pendingInsertions, setPendingInsertions] = useState<string[]>([])
+ 		const _shiftHoldTimerRef = useRef<NodeJS.Timeout | null>(null)
+ 		const [showUnsupportedFileError, setShowUnsupportedFileError] = useState(false)
+@@ -315,7 +286,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 
+ 		const [fileSearchResults, setFileSearchResults] = useState<SearchResult[]>([])
+ 		const [searchLoading, setSearchLoading] = useState(false)
+-		const [, metaKeyChar] = useMetaKeyDetection(platform)
++		useMetaKeyDetection(platform)
+ 
+ 		// Add a ref to track previous menu state
+ 		const prevShowModelSelector = useRef(showModelSelector)
+@@ -1448,11 +1419,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 				),
+ 			)
+ 		}
+-		// Replace Meta with the platform specific key and uppercase the command letter.
+-		const togglePlanActKeys = usePlatform()
+-			.togglePlanActKeys.replace("Meta", metaKeyChar)
+-			.replace(/.$/, (match) => match.toUpperCase())
+-
+ 		return (
+ 			<div>
+ 				<div
+@@ -1781,36 +1747,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 							</ModelContainer>
+ 						</ButtonGroup>
+ 					</div>
+-					{/* Tooltip for Plan/Act toggle remains outside the conditional rendering */}
+-					<Tooltip>
+-						<TooltipContent
+-							className="text-xs px-2 flex flex-col gap-1"
+-							hidden={shownTooltipMode === null}
+-							side="top">
+-							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Cline will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
+-							<p className="text-description/80 text-xs mb-0">
+-								Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
+-							</p>
+-						</TooltipContent>
+-						<TooltipTrigger>
+-							<SwitchContainer data-testid="mode-switch" disabled={false} onClick={onModeToggle}>
+-								<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
+-								{["Plan", "Act"].map((m) => (
+-									<div
+-										aria-checked={mode === m.toLowerCase()}
+-										className={cn(
+-											"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
+-											mode === m.toLowerCase() ? "text-white" : "text-input-foreground",
+-										)}
+-										onMouseLeave={() => setShownTooltipMode(null)}
+-										onMouseOver={() => setShownTooltipMode(m.toLowerCase() === "plan" ? "plan" : "act")}
+-										role="switch">
+-										{m}
+-									</div>
+-								))}
+-							</SwitchContainer>
+-						</TooltipTrigger>
+-					</Tooltip>
++					{/* Plan/Act switch intentionally hidden from footer UI */}
+ 				</div>
+ 			</div>
+ 		)
+diff --git a/webview-ui/src/components/menu/Navbar.tsx b/webview-ui/src/components/menu/Navbar.tsx
+index 0bb41d7..c096b21 100644
+--- a/webview-ui/src/components/menu/Navbar.tsx
++++ b/webview-ui/src/components/menu/Navbar.tsx
+@@ -1,20 +1,12 @@
+-import { HistoryIcon, PlusIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
++import { HistoryIcon, PlusIcon, SettingsIcon } from "lucide-react"
+ import { useMemo } from "react"
+ import { Button } from "@/components/ui/button"
+ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+ import { TaskServiceClient } from "@/services/grpc-client"
+ import { useExtensionState } from "../../context/ExtensionStateContext"
+ 
+-// Custom MCP Server Icon component using VSCode codicon
+-const McpServerIcon = ({ className, size }: { className?: string; size?: number }) => (
+-	<span
+-		className={`codicon codicon-server flex items-center ${className || ""}`}
+-		style={{ fontSize: size ? `${size}px` : "12.5px", marginBottom: "1px" }}
+-	/>
+-)
+-
+ export const Navbar = () => {
+-	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMcp, navigateToChat } = useExtensionState()
++	const { navigateToHistory, navigateToSettings, navigateToChat } = useExtensionState()
+ 
+ 	const SETTINGS_TABS = useMemo(
+ 		() => [
+@@ -32,13 +24,6 @@ export const Navbar = () => {
+ 						.finally(() => navigateToChat())
+ 				},
+ 			},
+-			{
+-				id: "mcp",
+-				name: "MCP",
+-				tooltip: "MCP Servers",
+-				icon: McpServerIcon,
+-				navigate: navigateToMcp,
+-			},
+ 			{
+ 				id: "history",
+ 				name: "History",
+@@ -46,13 +31,6 @@ export const Navbar = () => {
+ 				icon: HistoryIcon,
+ 				navigate: navigateToHistory,
+ 			},
+-			{
+-				id: "account",
+-				name: "Account",
+-				tooltip: "Account",
+-				icon: UserCircleIcon,
+-				navigate: navigateToAccount,
+-			},
+ 			{
+ 				id: "settings",
+ 				name: "Settings",
+@@ -61,7 +39,7 @@ export const Navbar = () => {
+ 				navigate: navigateToSettings,
+ 			},
+ 		],
+-		[navigateToAccount, navigateToChat, navigateToHistory, navigateToMcp, navigateToSettings],
++		[navigateToChat, navigateToHistory, navigateToSettings],
+ 	)
+ 
+ 	return (
+diff --git a/webview-ui/src/components/welcome/HomeHeader.tsx b/webview-ui/src/components/welcome/HomeHeader.tsx
+index f92da99..75f1dae 100644
+--- a/webview-ui/src/components/welcome/HomeHeader.tsx
++++ b/webview-ui/src/components/welcome/HomeHeader.tsx
+@@ -1,47 +1,13 @@
+-import { EmptyRequest } from "@shared/proto/cline/common"
+-import ClineLogoSanta from "@/assets/ClineLogoSanta"
+-import ClineLogoVariable from "@/assets/ClineLogoVariable"
+-import { useExtensionState } from "@/context/ExtensionStateContext"
+-import { UiServiceClient } from "@/services/grpc-client"
+-
+ interface HomeHeaderProps {
+ 	shouldShowQuickWins?: boolean
+ }
+ 
+-const HomeHeader = ({ shouldShowQuickWins = false }: HomeHeaderProps) => {
+-	const { environment } = useExtensionState()
+-
+-	const handleTakeATour = async () => {
+-		try {
+-			await UiServiceClient.openWalkthrough(EmptyRequest.create())
+-		} catch (error) {
+-			console.error("Error opening walkthrough:", error)
+-		}
+-	}
+-
+-	// Check if it's December for festive logo
+-	const isDecember = new Date().getMonth() === 11 // 11 = December (0-indexed)
+-	const LogoComponent = isDecember ? ClineLogoSanta : ClineLogoVariable
+-
++const HomeHeader = ({ shouldShowQuickWins: _shouldShowQuickWins = false }: HomeHeaderProps) => {
+ 	return (
+ 		<div className="flex flex-col items-center mb-5">
+-			<div className="my-7">
+-				<LogoComponent className="size-20" environment={environment} />
+-			</div>
+-			<div className="text-center flex items-center justify-center px-4">
++			<div className="text-center flex items-center justify-center px-4 mt-7">
+ 				<h1 className="m-0 font-bold">What can I do for you?</h1>
+ 			</div>
+-			{shouldShowQuickWins && (
+-				<div className="mt-4">
+-					<button
+-						className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-panel bg-white/2 hover:bg-list-background-hover transition-colors duration-150 ease-in-out text-code-foreground text-sm font-medium cursor-pointer"
+-						onClick={handleTakeATour}
+-						type="button">
+-						Take a Tour
+-						<span className="codicon codicon-play scale-90"></span>
+-					</button>
+-				</div>
+-			)}
+ 		</div>
+ 	)
+ }
+diff --git a/webview-ui/src/components/welcome/WelcomeView.tsx b/webview-ui/src/components/welcome/WelcomeView.tsx
+index 69cc16b..f77a3fb 100644
+--- a/webview-ui/src/components/welcome/WelcomeView.tsx
++++ b/webview-ui/src/components/welcome/WelcomeView.tsx
+@@ -1,7 +1,6 @@
+ import { BooleanRequest, EmptyRequest } from "@shared/proto/cline/common"
+-import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
++import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+ import { memo, useEffect, useState } from "react"
+-import ClineLogoWhite from "@/assets/ClineLogoWhite"
+ import ApiOptions from "@/components/settings/ApiOptions"
+ import { useExtensionState } from "@/context/ExtensionStateContext"
+ import { AccountServiceClient, StateServiceClient } from "@/services/grpc-client"
+@@ -39,18 +38,11 @@ const WelcomeView = memo(() => {
+ 	return (
+ 		<div className="fixed inset-0 p-0 flex flex-col">
+ 			<div className="h-full px-5 overflow-auto flex flex-col gap-2.5">
+-				<h2 className="text-lg font-semibold">Hi, I'm Cline</h2>
+-				<div className="flex justify-center my-5">
+-					<ClineLogoWhite className="size-16" />
+-				</div>
++				<h2 className="text-lg font-semibold">Hi, I'm Resonance</h2>
+ 				<p>
+-					I can do all kinds of tasks thanks to breakthroughs in{" "}
+-					<VSCodeLink className="inline" href="https://www.anthropic.com/claude/sonnet">
+-						Claude 4 Sonnet's
+-					</VSCodeLink>
+-					agentic coding capabilities and access to tools that let me create & edit files, explore complex projects, use
+-					a browser, and execute terminal commands <i>(with your permission, of course)</i>. I can even use MCP to
+-					create new tools and extend my own capabilities.
++					I'm your project management assistant with persistent memory. I help organize work,
++					track progress across sessions, and manage knowledge — all while maintaining state in
++					the <code>.resonance/</code> directory.
+ 				</p>
+ 
+ 				<p className="text-(--vscode-descriptionForeground)">

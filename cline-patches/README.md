@@ -143,6 +143,36 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 - `src/core/controller/index.ts`
 - `src/shared/ExtensionMessage.ts`
 
+### 012-task-header-compact.patch
+**Compact Task Header + Context Ring**
+- Simplifies the chat task header to a single compact row (no accordion behavior)
+- Replaces the large context progress bar with a compact circular context ring indicator
+- Moves context details and compact-task action into hover summary content
+- Replaces New Task `X` icon with a create-semantic icon and updated tooltip/aria label
+
+**Files modified:**
+- `webview-ui/src/components/chat/task-header/TaskHeader.tsx`
+- `webview-ui/src/components/chat/task-header/ContextWindow.tsx`
+- `webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx`
+- `webview-ui/src/components/chat/task-header/ContextWindowRing.tsx`
+- `webview-ui/src/components/chat/task-header/buttons/NewTaskButton.tsx`
+- `webview-ui/src/components/chat/task-header/TaskHeader.stories.tsx`
+
+### 013-welcome-and-navbar-simplification.patch
+**CLI Welcome Cleanup + Minimal Navbar**
+- Removes the ASCII Cline logo from the CLI welcome screen
+- Hides the Plan/Act mode switch UI in CLI welcome, showing only the current model
+- Simplifies the webview top navbar to only New Task, History, and Settings
+- Hides the footer Plan/Act switch in the webview chat input area
+
+**Files modified:**
+- `package.json`
+- `cli/src/components/WelcomeView.tsx`
+- `webview-ui/src/components/menu/Navbar.tsx`
+- `webview-ui/src/components/welcome/WelcomeView.tsx`
+- `webview-ui/src/components/welcome/HomeHeader.tsx`
+- `webview-ui/src/components/chat/ChatTextArea.tsx`
+
 ## Quick Start
 
 ### Build Process
@@ -167,6 +197,8 @@ git apply ../cline-patches/008-resonance-commands.patch
 git apply ../cline-patches/009-uncaptured-branding.patch
 git apply ../cline-patches/010-codicon-font-path-fix.patch
 git apply ../cline-patches/011-auto-approve-settings.patch
+git apply ../cline-patches/012-task-header-compact.patch
+git apply ../cline-patches/013-welcome-and-navbar-simplification.patch
 
 # 3. Install dependencies
 npm install
@@ -189,8 +221,48 @@ This is the full workflow every time you add or change anything in `resonance-ex
 
 #### Step 1 — Edit files in resonance-extension/
 
-Work directly in `/resonance/resonance-extension/`. The dev preview loads this folder from source,
-so you can test locally without building anything extra:
+Work directly in `/resonance/resonance-extension/`. The dev preview loads this folder from source
+via `--extensionDevelopmentPath`.
+
+### Local UI Preview (validated workflow)
+
+Use this exact flow when changing webview UI files (`webview-ui/src/**`):
+
+```bash
+# Terminal A (optional, for extension host changes in src/**)
+cd /Users/jmat/Github/resonance/resonance-extension
+npm run watch
+
+# Build webview assets after UI changes (required)
+cd /Users/jmat/Github/resonance/resonance-extension
+npm run build:webview
+
+# Terminal B
+cd /Users/jmat/Github/resonance
+./dev-preview.sh
+```
+
+Important:
+- `npm run watch` does **not** rebuild `webview-ui/build` for TSX/CSS webview changes.
+- For task-header/chat/settings UI changes, always run `npm run build:webview` before relaunching preview.
+- If you also changed extension host code (`src/**`), run `node esbuild.mjs` to recompile `dist/extension.js`.
+- If you still see stale UI, clear dev cache and restart preview:
+
+```bash
+cd /Users/jmat/Github/resonance
+rm -rf .resonance-dev-data/Cache \
+  .resonance-dev-data/GPUCache \
+  ".resonance-dev-data/Code Cache" \
+  ".resonance-dev-data/Service Worker" \
+  .resonance-dev-data/User/workspaceStorage
+./dev-preview.sh
+```
+
+Sanity check:
+- `./dev-preview.sh` = source-loaded extension preview (not VSIX install testing).
+- VSIX behavior is only verified after packaging and copying `resonance.vsix` into `resonance-ide/`.
+
+Quick launch (after build):
 
 ```bash
 cd /resonance
@@ -394,4 +466,4 @@ git apply --reject ../cline-patches/001-resonance-system.patch
 
 ---
 
-**Last Updated:** 2026-03-08
+**Last Updated:** 2026-03-15
