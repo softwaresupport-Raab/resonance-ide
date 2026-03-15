@@ -9,6 +9,10 @@ on:
       generate_assets:
         type: boolean
         description: Generate assets
+      full_assets:
+        type: boolean
+        description: Upload full bin artifact bundle (large)
+        default: false
       checkout_pr:
         type: string
         description: Checkout PR
@@ -164,7 +168,6 @@ jobs:
       matrix:
         vscode_arch:
           - x64
-          - arm64
     defaults:
       run:
         shell: bash
@@ -284,13 +287,13 @@ jobs:
         run: ./update_version.sh
         if: env.SHOULD_BUILD == 'yes' && env.SHOULD_DEPLOY == 'yes'
 
-      - name: Upload assets
+      - name: Upload full assets (optional)
         uses: actions/upload-artifact@v6
         with:
           name: bin-${{ matrix.vscode_arch }}
           path: assets/
           retention-days: 3
-        if: env.SHOULD_BUILD == 'yes' && env.SHOULD_DEPLOY == 'no' && github.event.inputs.generate_assets == 'true'
+        if: env.SHOULD_BUILD == 'yes' && env.SHOULD_DEPLOY == 'no' && github.event.inputs.generate_assets == 'true' && github.event.inputs.full_assets == 'true'
 
   winget:
     needs: build
