@@ -1,0 +1,31 @@
+diff --git a/src/vs/workbench/contrib/files/browser/fileCommands.ts b/src/vs/workbench/contrib/files/browser/fileCommands.ts
+index c8fc8aa..35151af 100644
+--- a/src/vs/workbench/contrib/files/browser/fileCommands.ts
++++ b/src/vs/workbench/contrib/files/browser/fileCommands.ts
+@@ -42,6 +42,7 @@ import { isCancellationError } from '../../../../base/common/errors.js';
+ import { IAction, toAction } from '../../../../base/common/actions.js';
+ import { EditorOpenSource, EditorResolution } from '../../../../platform/editor/common/editor.js';
+ import { hash } from '../../../../base/common/hash.js';
++import { extname } from '../../../../base/common/path.js';
+ import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+ import { IPaneCompositePartService } from '../../../services/panecomposite/browser/panecomposite.js';
+ import { ViewContainerLocation } from '../../../common/views.js';
+@@ -716,10 +717,16 @@ CommandsRegistry.registerCommand({
+ 			return;
+ 		}
+ 
+-		await fileService.createFile(saveUri, undefined, { overwrite: true });
++		let resourceToCreate = saveUri;
++		if (!extname(basename(resourceToCreate))) {
++			// Resonance: default to markdown when creating a new file without extension.
++			resourceToCreate = resourceToCreate.with({ path: `${resourceToCreate.path}.md` });
++		}
++
++		await fileService.createFile(resourceToCreate, undefined, { overwrite: true });
+ 
+ 		await editorService.openEditor({
+-			resource: saveUri,
++			resource: resourceToCreate,
+ 			options: {
+ 				override: args?.viewType,
+ 				pinned: true
