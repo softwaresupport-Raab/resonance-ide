@@ -12,23 +12,12 @@ on:
       checkout_pr:
         type: string
         description: Checkout PR
-  repository_dispatch:
-    types: [insider]
-  push:
-    branches: [ insider ]
-    paths-ignore:
-    - '**/*.md'
-    - 'upstream/*.json'
-  pull_request:
-    branches: [ insider ]
-    paths-ignore:
-    - '**/*.md'
 
 env:
   APP_NAME: VSCodium
   ASSETS_REPOSITORY: ${{ github.repository }}-insiders
   BINARY_NAME: codium-insiders
-  GITHUB_BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'insider' }}
+  GITHUB_BRANCH: insider
   GH_REPO_PATH: ${{ github.repository }}
   ORG_NAME: ${{ github.repository_owner }}
   OS_NAME: windows

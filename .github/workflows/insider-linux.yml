@@ -12,17 +12,6 @@ on:
       checkout_pr:
         type: string
         description: Checkout PR
-  repository_dispatch:
-    types: [insider]
-  push:
-    branches: [ insider ]
-    paths-ignore:
-    - '**/*.md'
-    - 'upstream/*.json'
-  pull_request:
-    branches: [ insider ]
-    paths-ignore:
-    - '**/*.md'
 
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
@@ -31,7 +20,7 @@ env:
   BINARY_NAME: codium-insiders
   DISABLE_UPDATE: 'yes'
   GH_REPO_PATH: ${{ github.repository }}
-  GITHUB_BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'insider' }}
+  GITHUB_BRANCH: insider
   ORG_NAME: ${{ github.repository_owner }}
   OS_NAME: linux
   VERSIONS_REPOSITORY: ${{ github.repository_owner }}/versions
