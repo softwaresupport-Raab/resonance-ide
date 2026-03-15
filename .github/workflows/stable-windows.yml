@@ -9,6 +9,10 @@ on:
       generate_assets:
         type: boolean
         description: Generate assets
+      full_installers:
+        type: boolean
+        description: Build all installer types (system EXE + MSI)
+        default: false
       full_assets:
         type: boolean
         description: Upload full bin artifact bundle (large)
@@ -240,6 +244,13 @@ jobs:
         if: env.SHOULD_BUILD == 'yes'
 
       - name: Prepare assets
+        env:
+          # For manual asset generation (test builds), default to smaller output:
+          # only x64 User EXE. Keep full installer matrix for real deploys or when explicitly requested.
+          SHOULD_BUILD_EXE_SYS: ${{ (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.full_installers == 'true') && 'yes' || 'no' }}
+          SHOULD_BUILD_EXE_USR: 'yes'
+          SHOULD_BUILD_MSI: ${{ (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.full_installers == 'true') && 'yes' || 'no' }}
+          SHOULD_BUILD_MSI_NOUP: 'no'
         run: ./prepare_assets.sh
         if: env.SHOULD_BUILD == 'yes' && (env.SHOULD_DEPLOY == 'yes' || github.event.inputs.generate_assets == 'true')
 
