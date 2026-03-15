@@ -183,16 +183,105 @@ npx @vscode/vsce package
 code --install-extension resonance-3.57.1.vsix
 ```
 
-### Regenerating Patches
-After editing files in `resonance-extension/`:
+### Dev Loop (how to make changes and ship them)
+
+This is the full workflow every time you add or change anything in `resonance-extension/`.
+
+#### Step 1 — Edit files in resonance-extension/
+
+Work directly in `/resonance/resonance-extension/`. The dev preview loads this folder from source,
+so you can test locally without building anything extra:
+
+```bash
+cd /resonance
+./dev-preview.sh          # launches VS Code with the extension loaded from source
+```
+
+#### Step 2 — Figure out which patch owns the changed files
+
+Each patch owns a specific set of files. Before generating patches, check whether the file you
+changed is already owned by an existing patch, or if you need a new one.
+
+```bash
+# See which files each existing patch touches:
+grep "^diff --git" resonance-ide/cline-patches/*.patch | sed 's|.*diff --git a/||;s| b/.*||'
+
+# See which of YOUR changed files are NOT yet in any patch:
+cd resonance-extension
+git diff --name-only | sort > /tmp/changed.txt
+grep "^diff --git" ../resonance-ide/cline-patches/*.patch \
+  | sed 's|.*diff --git a/||;s| b/.*||' | sort > /tmp/patched.txt
+comm -23 /tmp/changed.txt /tmp/patched.txt   # files not yet in any patch → need a new patch
+```
+
+#### Step 3 — Regenerate affected patches
+
+For each patch that owns a file you changed, regenerate it by scoping `git diff` to exactly
+the files that patch owns:
 
 ```bash
 cd resonance-extension
 
-git diff src/core/prompts/ > ../cline-patches/001-resonance-system.patch
-git diff package.json walkthrough/ webview-ui/ > ../cline-patches/002-ui-branding.patch
-# etc. — scope each patch to the files it owns
+# Example: you changed FeatureSettingsSection.tsx (owned by 009):
+git diff -- \
+  proto/cline/account.proto \
+  webview-ui/src/components/chat/ChatTextArea.tsx \
+  webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx \
+  # ... all other files owned by 009 ...
+  > ../resonance-ide/cline-patches/009-uncaptured-branding.patch
 ```
+
+> **Rule:** Always scope `git diff` to the exact files listed under "Files modified" for that
+> patch — never dump the entire working tree into one patch.
+
+#### Step 4 — Create a new patch for genuinely new files
+
+If you added or changed files that no existing patch owns, create a new numbered patch:
+
+```bash
+cd resonance-extension
+
+# Pick the next available number (check ls resonance-ide/cline-patches/)
+git diff -- \
+  path/to/new-file1.ts \
+  path/to/new-file2.tsx \
+  > ../resonance-ide/cline-patches/012-your-feature-name.patch
+```
+
+Add the new patch to the apply-order list in this README and document it in the Patches Overview.
+
+#### Step 5 — Build the VSIX
+
+```bash
+cd resonance-extension
+npm run build:webview          # rebuild the webview UI
+npx @vscode/vsce package \
+  --no-dependencies --skip-license \
+  -o resonance-3.57.1.vsix
+```
+
+#### Step 6 — Copy VSIX to resonance-ide
+
+The CI pipeline (`prepare_vscode.sh`) looks for `resonance-ide/resonance.vsix`. Always overwrite
+this file with the freshly built VSIX:
+
+```bash
+cp resonance-extension/resonance-3.57.1.vsix resonance-ide/resonance.vsix
+```
+
+> **Why?** The CI never runs `npm install` + `vsce package` itself — it takes the pre-built VSIX
+> from this repo. If you forget this step, the installer will ship the old extension.
+
+#### Step 7 — Commit everything in resonance-ide
+
+```bash
+cd resonance-ide
+git add cline-patches/*.patch resonance.vsix
+git commit -m "feat: describe your change"
+git push
+```
+
+This triggers GitHub Actions to build macOS / Windows / Linux installers (~45 min).
 
 ## What Changed
 
