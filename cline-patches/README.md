@@ -173,6 +173,14 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 - `webview-ui/src/components/welcome/HomeHeader.tsx`
 - `webview-ui/src/components/chat/ChatTextArea.tsx`
 
+### 014-about-section-links-removal.patch
+**Simplify About Section**
+- Removes Community, Development, and Resources link groups from Settings -> About
+- Cleans up unused `VSCodeLink` import in About section component
+
+**Files modified:**
+- `webview-ui/src/components/settings/sections/AboutSection.tsx`
+
 ## Quick Start
 
 ### Build Process
@@ -199,6 +207,7 @@ git apply ../cline-patches/010-codicon-font-path-fix.patch
 git apply ../cline-patches/011-auto-approve-settings.patch
 git apply ../cline-patches/012-task-header-compact.patch
 git apply ../cline-patches/013-welcome-and-navbar-simplification.patch
+git apply ../cline-patches/014-about-section-links-removal.patch
 
 # 3. Install dependencies
 npm install
