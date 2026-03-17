@@ -181,6 +181,13 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 **Files modified:**
 - `webview-ui/src/components/settings/sections/AboutSection.tsx`
 
+### 015-hide-banners.patch
+**Hide All Welcome Banners**
+- Empties `BANNER_DATA` so no banners are shown in the Welcome view
+
+**Files modified:**
+- `src/shared/cline/banner.ts`
+
 ## Quick Start
 
 ### Build Process
@@ -208,6 +215,7 @@ git apply ../cline-patches/011-auto-approve-settings.patch
 git apply ../cline-patches/012-task-header-compact.patch
 git apply ../cline-patches/013-welcome-and-navbar-simplification.patch
 git apply ../cline-patches/014-about-section-links-removal.patch
+git apply ../cline-patches/015-hide-banners.patch
 
 # 3. Install dependencies
 npm install
