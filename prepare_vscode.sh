@@ -144,10 +144,6 @@ echo "GLOBAL_DIRNAME=\"${GLOBAL_DIRNAME}\""
 echo "ORG_NAME=\"${ORG_NAME}\""
 echo "TUNNEL_APP_NAME=\"${TUNNEL_APP_NAME}\""
 
-if [[ "${DISABLE_UPDATE}" == "yes" ]]; then
-  mv ../patches/disable-update.patch.yet ../patches/disable-update.patch
-fi
-
 for file in ../patches/*.patch; do
   if [[ -f "${file}" ]]; then
     apply_patch "${file}"
