@@ -7,3 +7,13 @@ index d96926b..43f5d90 100644
 -			default: 'default',
 +			default: 'none',
  			scope: ConfigurationScope.APPLICATION,
+
+diff --git a/src/vs/platform/update/electron-main/abstractUpdateService.ts b/src/vs/platform/update/electron-main/abstractUpdateService.ts
+index 0e63d40..1d6ab2d 100644
+--- a/src/vs/platform/update/electron-main/abstractUpdateService.ts
++++ b/src/vs/platform/update/electron-main/abstractUpdateService.ts
+@@ -142,3 +142,3 @@ export abstract class AbstractUpdateService implements IUpdateService {
+ 	private getProductQuality(updateMode: string): string | undefined {
+-		return updateMode === 'none' ? undefined : this.productService.quality;
++		return undefined;
+ 	}

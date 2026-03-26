@@ -28,6 +28,7 @@ export VSCODE_QUALITY=stable
 export SHOULD_BUILD=yes
 export APP_NAME=Resonance
 export BINARY_NAME=resonance
+export DISABLE_UPDATE=yes
 export CI_BUILD=no
 export NODE_OPTIONS="--max-old-space-size=8192"
 

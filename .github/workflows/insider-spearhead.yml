@@ -25,6 +25,7 @@ jobs:
       APP_NAME: VSCodium
       ASSETS_REPOSITORY: ${{ github.repository }}-insiders
       BINARY_NAME: codium-insiders
+      DISABLE_UPDATE: 'yes'
       GH_REPO_PATH: ${{ github.repository }}
       ORG_NAME: ${{ github.repository_owner }}
       OS_NAME: osx

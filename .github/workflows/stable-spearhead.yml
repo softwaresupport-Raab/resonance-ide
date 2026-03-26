@@ -22,6 +22,7 @@ jobs:
       APP_NAME: VSCodium
       ASSETS_REPOSITORY: ${{ github.repository }}
       BINARY_NAME: codium
+      DISABLE_UPDATE: 'yes'
       GH_REPO_PATH: ${{ github.repository }}
       ORG_NAME: ${{ github.repository_owner }}
       OS_NAME: osx
