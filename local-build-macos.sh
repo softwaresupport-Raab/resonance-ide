@@ -38,6 +38,12 @@ security find-certificate -a -p /Library/Keychains/System.keychain > /tmp/node-e
 export NODE_EXTRA_CA_CERTS=/tmp/node-extra-ca-certs.pem
 
 echo "=== Step 1: get_repo ==="
+# Clean previous vscode clone for idempotent re-runs
+# (get_repo.sh does `git remote add origin` which fails if remote already exists)
+if [[ -d vscode/.git ]]; then
+  echo "Removing previous vscode/ clone for clean re-run..."
+  rm -rf vscode
+fi
 . ./get_repo.sh
 
 echo "=== Step 2: build ==="
