@@ -1,0 +1,12 @@
+diff --git a/src/core/webview/WebviewProvider.ts b/src/core/webview/WebviewProvider.ts
+index ab2508e..d87d1b8 100644
+--- a/src/core/webview/WebviewProvider.ts
++++ b/src/core/webview/WebviewProvider.ts
+@@ -122,7 +122,6 @@ export abstract class WebviewProvider {
+ 				<noscript>You need to enable JavaScript to run this app.</noscript>
+ 				<div id="root"></div>
+ 				<script type="module" nonce="${nonce}" src="${scriptUrl}"></script>
+-				<script src="http://localhost:8097"></script> 
+ 			</body>
+ 		</html>
+ 		`

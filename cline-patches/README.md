@@ -188,6 +188,14 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 **Files modified:**
 - `src/shared/cline/banner.ts`
 
+### 016-remove-devtools-script.patch
+**Remove React DevTools Script from Production**
+- Removes leftover `<script src="http://localhost:8097">` (React DevTools) from the webview HTML template
+- This script was blocked by CSP in production and caused console errors on every webview load
+
+**Files modified:**
+- `src/core/webview/WebviewProvider.ts`
+
 ## Quick Start
 
 ### Build Process
@@ -216,6 +224,7 @@ git apply ../cline-patches/012-task-header-compact.patch
 git apply ../cline-patches/013-welcome-and-navbar-simplification.patch
 git apply ../cline-patches/014-about-section-links-removal.patch
 git apply ../cline-patches/015-hide-banners.patch
+git apply ../cline-patches/016-remove-devtools-script.patch
 
 # 3. Install dependencies
 npm install
