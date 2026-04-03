@@ -1,3 +1,7 @@
+> Fork note for Resonance contributors:
+> This file is mostly upstream VSCodium documentation.
+> For the current Resonance architecture/workflow, start with `../README.md` and `cline-patches/README.md`.
+
 <div id="vscodium-logo" align="center">
     <br />
     <img src="./icons/stable/codium_cnl.svg" alt="VSCodium Logo" width="200"/>
