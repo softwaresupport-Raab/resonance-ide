@@ -241,7 +241,7 @@ index 142db3f..c694551 100644
  		</div>
 diff --git a/webview-ui/src/components/chat/task-header/ContextWindowRing.tsx b/webview-ui/src/components/chat/task-header/ContextWindowRing.tsx
 new file mode 100644
-index 0000000..0c4078b
+index 0000000..a01fa93
 --- /dev/null
 +++ b/webview-ui/src/components/chat/task-header/ContextWindowRing.tsx
 @@ -0,0 +1,38 @@
@@ -283,7 +283,6 @@ index 0000000..0c4078b
 +}
 +
 +export default memo(ContextWindowRing)
-\ No newline at end of file
 diff --git a/webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx b/webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx
 index c4c0773..d982d9d 100644
 --- a/webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx

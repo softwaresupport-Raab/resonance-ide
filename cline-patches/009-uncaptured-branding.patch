@@ -12,18 +12,118 @@ index 44e121b..1ed257d 100644
  
    // Returns a link the webview can use to redirect back to the user's IDE.
 diff --git a/webview-ui/src/components/chat/ChatTextArea.tsx b/webview-ui/src/components/chat/ChatTextArea.tsx
-index e5cd9ee..3c7b55d 100644
+index e5cd9ee..6c4f777 100644
 --- a/webview-ui/src/components/chat/ChatTextArea.tsx
 +++ b/webview-ui/src/components/chat/ChatTextArea.tsx
-@@ -1787,7 +1787,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
- 							className="text-xs px-2 flex flex-col gap-1"
- 							hidden={shownTooltipMode === null}
- 							side="top">
+@@ -6,7 +6,6 @@ import { UpdateApiConfigurationRequest } from "@shared/proto/cline/models"
+ import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/cline/state"
+ import { convertApiConfigurationToProto } from "@shared/proto-conversions/models/api-configuration-conversion"
+ import { type SlashCommand } from "@shared/slashCommands"
+-import { Mode } from "@shared/storage/types"
+ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+ import { AtSignIcon, PlusIcon } from "lucide-react"
+ import type React from "react"
+@@ -101,33 +100,6 @@ interface GitCommit {
+ }
+ 
+ const PLAN_MODE_COLOR = "var(--vscode-activityWarningBadge-background)"
+-const ACT_MODE_COLOR = "var(--vscode-focusBorder)"
+-
+-const SwitchContainer = styled.div<{ disabled: boolean }>`
+-	display: flex;
+-	align-items: center;
+-	background-color: transparent;
+-	border: 1px solid var(--vscode-input-border);
+-	border-radius: 12px;
+-	overflow: hidden;
+-	cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
+-	opacity: ${(props) => (props.disabled ? 0.5 : 1)};
+-	transform: scale(1);
+-	transform-origin: right center;
+-	margin-left: 0;
+-	user-select: none; // Prevent text selection
+-`
+-
+-const Slider = styled.div.withConfig({
+-	shouldForwardProp: (prop) => !["isAct", "isPlan"].includes(prop),
+-})<{ isAct: boolean; isPlan?: boolean }>`
+-	position: absolute;
+-	height: 100%;
+-	width: 50%;
+-	background-color: ${(props) => (props.isPlan ? PLAN_MODE_COLOR : ACT_MODE_COLOR)};
+-	transition: transform 0.2s ease;
+-	transform: translateX(${(props) => (props.isAct ? "100%" : "0%")});
+-`
+ 
+ const ButtonGroup = styled.div`
+ 	display: flex;
+@@ -305,7 +277,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 		const buttonRef = useRef<HTMLDivElement>(null)
+ 		const [arrowPosition, setArrowPosition] = useState(0)
+ 		const [menuPosition, setMenuPosition] = useState(0)
+-		const [shownTooltipMode, setShownTooltipMode] = useState<Mode | null>(null)
+ 		const [pendingInsertions, setPendingInsertions] = useState<string[]>([])
+ 		const _shiftHoldTimerRef = useRef<NodeJS.Timeout | null>(null)
+ 		const [showUnsupportedFileError, setShowUnsupportedFileError] = useState(false)
+@@ -315,7 +286,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 
+ 		const [fileSearchResults, setFileSearchResults] = useState<SearchResult[]>([])
+ 		const [searchLoading, setSearchLoading] = useState(false)
+-		const [, metaKeyChar] = useMetaKeyDetection(platform)
++		useMetaKeyDetection(platform)
+ 
+ 		// Add a ref to track previous menu state
+ 		const prevShowModelSelector = useRef(showModelSelector)
+@@ -1448,11 +1419,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 				),
+ 			)
+ 		}
+-		// Replace Meta with the platform specific key and uppercase the command letter.
+-		const togglePlanActKeys = usePlatform()
+-			.togglePlanActKeys.replace("Meta", metaKeyChar)
+-			.replace(/.$/, (match) => match.toUpperCase())
+-
+ 		return (
+ 			<div>
+ 				<div
+@@ -1781,36 +1747,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 							</ModelContainer>
+ 						</ButtonGroup>
+ 					</div>
+-					{/* Tooltip for Plan/Act toggle remains outside the conditional rendering */}
+-					<Tooltip>
+-						<TooltipContent
+-							className="text-xs px-2 flex flex-col gap-1"
+-							hidden={shownTooltipMode === null}
+-							side="top">
 -							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Cline will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
-+							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Resonance will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
- 							<p className="text-description/80 text-xs mb-0">
- 								Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
- 							</p>
+-							<p className="text-description/80 text-xs mb-0">
+-								Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
+-							</p>
+-						</TooltipContent>
+-						<TooltipTrigger>
+-							<SwitchContainer data-testid="mode-switch" disabled={false} onClick={onModeToggle}>
+-								<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
+-								{["Plan", "Act"].map((m) => (
+-									<div
+-										aria-checked={mode === m.toLowerCase()}
+-										className={cn(
+-											"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
+-											mode === m.toLowerCase() ? "text-white" : "text-input-foreground",
+-										)}
+-										onMouseLeave={() => setShownTooltipMode(null)}
+-										onMouseOver={() => setShownTooltipMode(m.toLowerCase() === "plan" ? "plan" : "act")}
+-										role="switch">
+-										{m}
+-									</div>
+-								))}
+-							</SwitchContainer>
+-						</TooltipTrigger>
+-					</Tooltip>
++					{/* Plan/Act switch intentionally hidden from footer UI */}
+ 				</div>
+ 			</div>
+ 		)
 diff --git a/webview-ui/src/components/chat/ErrorRow.tsx b/webview-ui/src/components/chat/ErrorRow.tsx
 index fbb9c88..57a1642 100644
 --- a/webview-ui/src/components/chat/ErrorRow.tsx
@@ -57,6 +157,18 @@ index eebfd40..34f619f 100644
 -	return parts.length === 0 ? "Context" : "Cline" + action + parts.join(", ")
 +	return parts.length === 0 ? "Context" : "Resonance" + action + parts.join(", ")
  }
+diff --git a/webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts b/webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts
+index 0a1dddf..9793b2d 100644
+--- a/webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts
++++ b/webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts
+@@ -40,7 +40,6 @@ export function useMessageHandlers(messages: ClineMessage[], chatState: ChatStat
+ 			}
+ 
+ 			if (hasContent) {
+-				console.log("[ChatView] handleSendMessage - Sending message:", messageToSend)
+ 				let messageSent = false
+ 
+ 				if (messages.length === 0) {
 diff --git a/webview-ui/src/components/common/TelemetryBanner.tsx b/webview-ui/src/components/common/TelemetryBanner.tsx
 index a957201..bfbf04e 100644
 --- a/webview-ui/src/components/common/TelemetryBanner.tsx
@@ -306,10 +418,15 @@ index a037213..7304439 100644
  		icon: Info,
  	},
 diff --git a/webview-ui/src/components/settings/sections/AboutSection.tsx b/webview-ui/src/components/settings/sections/AboutSection.tsx
-index 6e84d53..84d8512 100644
+index 6e84d53..933e0c4 100644
 --- a/webview-ui/src/components/settings/sections/AboutSection.tsx
 +++ b/webview-ui/src/components/settings/sections/AboutSection.tsx
-@@ -11,9 +11,9 @@ const AboutSection = ({ version, renderSectionHeader }: AboutSectionProps) => {
+@@ -1,4 +1,3 @@
+-import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+ import Section from "../Section"
+ 
+ interface AboutSectionProps {
+@@ -11,40 +10,12 @@ const AboutSection = ({ version, renderSectionHeader }: AboutSectionProps) => {
  			{renderSectionHeader("about")}
  			<Section>
  				<div className="flex px-4 flex-col gap-2">
@@ -321,6 +438,37 @@ index 6e84d53..84d8512 100644
  						step-by-step with tools that let him create & edit files, explore large projects, use the browser, and
  						execute terminal commands (after you grant permission).
  					</p>
+-
+-					<h3 className="text-md font-semibold">Community & Support</h3>
+-					<p>
+-						<VSCodeLink href="https://x.com/cline">X</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://discord.gg/cline">Discord</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://www.reddit.com/r/cline/"> r/cline</VSCodeLink>
+-					</p>
+-
+-					<h3 className="text-md font-semibold">Development</h3>
+-					<p>
+-						<VSCodeLink href="https://github.com/cline/cline">GitHub</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://github.com/cline/cline/issues"> Issues</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://github.com/cline/cline/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop">
+-							{" "}
+-							Feature Requests
+-						</VSCodeLink>
+-					</p>
+-
+-					<h3 className="text-md font-semibold">Resources</h3>
+-					<p>
+-						<VSCodeLink href="https://docs.cline.bot/">Documentation</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://cline.bot/">https://cline.bot</VSCodeLink>
+-					</p>
+ 				</div>
+ 			</Section>
+ 		</div>
 diff --git a/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx b/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
 index 0d1be6b..4edcb39 100644
 --- a/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
@@ -495,25 +643,27 @@ index 02eea58..927e134 100644
  				<div className="flex flex-col space-y-1">
  					{" "}
 diff --git a/webview-ui/src/components/welcome/WelcomeView.tsx b/webview-ui/src/components/welcome/WelcomeView.tsx
-index 69cc16b..52f6b06 100644
+index 69cc16b..f77a3fb 100644
 --- a/webview-ui/src/components/welcome/WelcomeView.tsx
 +++ b/webview-ui/src/components/welcome/WelcomeView.tsx
-@@ -1,5 +1,5 @@
+@@ -1,7 +1,6 @@
  import { BooleanRequest, EmptyRequest } from "@shared/proto/cline/common"
 -import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 +import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
  import { memo, useEffect, useState } from "react"
- import ClineLogoWhite from "@/assets/ClineLogoWhite"
+-import ClineLogoWhite from "@/assets/ClineLogoWhite"
  import ApiOptions from "@/components/settings/ApiOptions"
-@@ -39,18 +39,14 @@ const WelcomeView = memo(() => {
+ import { useExtensionState } from "@/context/ExtensionStateContext"
+ import { AccountServiceClient, StateServiceClient } from "@/services/grpc-client"
+@@ -39,18 +38,11 @@ const WelcomeView = memo(() => {
  	return (
  		<div className="fixed inset-0 p-0 flex flex-col">
  			<div className="h-full px-5 overflow-auto flex flex-col gap-2.5">
 -				<h2 className="text-lg font-semibold">Hi, I'm Cline</h2>
+-				<div className="flex justify-center my-5">
+-					<ClineLogoWhite className="size-16" />
+-				</div>
 +				<h2 className="text-lg font-semibold">Hi, I'm Resonance</h2>
- 				<div className="flex justify-center my-5">
- 					<ClineLogoWhite className="size-16" />
- 				</div>
  				<p>
 -					I can do all kinds of tasks thanks to breakthroughs in{" "}
 -					<VSCodeLink className="inline" href="https://www.anthropic.com/claude/sonnet">

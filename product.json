@@ -661,7 +661,7 @@
     {
       "name": "resonance-team.resonance",
       "version": "3.57.1",
-      "sha256": "646b6a9779f3b2fddad66ef2606fe94256d4ecbc4118cb98eabb4f8d19caf911",
+      "sha256": "545afbc52b1ca8d218fb98ffc64bb8cb77360f0130bdaf66179a5f6747368e8f",
       "repo": "https://github.com/cline/cline",
       "vsix": "resonance/resonance.vsix",
       "metadata": {

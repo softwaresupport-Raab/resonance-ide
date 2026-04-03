@@ -68,12 +68,11 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 
 ### 005-hide-cost-display.patch
 **Hide Cost Bubbles**
-- Removes cost chips from task list, history view, and active chat header
+- Removes cost chips from task/history previews
 
 **Files modified:**
 - `webview-ui/src/components/history/HistoryPreview.tsx`
 - `webview-ui/src/components/history/HistoryViewItem.tsx`
-- `webview-ui/src/components/chat/task-header/TaskHeader.tsx`
 
 ### 006-preflight-parallelization.patch
 **Faster Request Preflight**
@@ -108,6 +107,7 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 - `proto/cline/account.proto`
 - `webview-ui/src/components/chat/ChatTextArea.tsx`
 - `webview-ui/src/components/chat/ErrorRow.tsx`
+- `webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts`
 - `webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx`
 - `webview-ui/src/components/common/TelemetryBanner.tsx`
 - `webview-ui/src/components/common/WhatsNewModal.tsx`
@@ -153,8 +153,8 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 **Files modified:**
 - `webview-ui/src/components/chat/task-header/TaskHeader.tsx`
 - `webview-ui/src/components/chat/task-header/ContextWindow.tsx`
+- `webview-ui/src/components/chat/task-header/ContextWindowRing.tsx` (new file)
 - `webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx`
-- `webview-ui/src/components/chat/task-header/ContextWindowRing.tsx`
 - `webview-ui/src/components/chat/task-header/buttons/NewTaskButton.tsx`
 - `webview-ui/src/components/chat/task-header/TaskHeader.stories.tsx`
 
@@ -172,14 +172,6 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 - `webview-ui/src/components/welcome/WelcomeView.tsx`
 - `webview-ui/src/components/welcome/HomeHeader.tsx`
 - `webview-ui/src/components/chat/ChatTextArea.tsx`
-
-### 014-about-section-links-removal.patch
-**Simplify About Section**
-- Removes Community, Development, and Resources link groups from Settings -> About
-- Cleans up unused `VSCodeLink` import in About section component
-
-**Files modified:**
-- `webview-ui/src/components/settings/sections/AboutSection.tsx`
 
 ### 015-hide-banners.patch
 **Hide All Welcome Banners**
@@ -211,7 +203,6 @@ git apply ../cline-patches/002-ui-branding.patch
 git apply ../cline-patches/002-scroll-behavior-fix.patch
 git apply ../cline-patches/003-deep-branding.patch
 git apply ../cline-patches/003-thinking-indicator.patch
-git apply ../cline-patches/003b-thinking-indicator-file.patch
 git apply ../cline-patches/004-resonance-defaults.patch
 git apply ../cline-patches/005-hide-cost-display.patch
 git apply ../cline-patches/006-preflight-parallelization.patch
@@ -222,7 +213,6 @@ git apply ../cline-patches/010-codicon-font-path-fix.patch
 git apply ../cline-patches/011-auto-approve-settings.patch
 git apply ../cline-patches/012-task-header-compact.patch
 git apply ../cline-patches/013-welcome-and-navbar-simplification.patch
-git apply ../cline-patches/014-about-section-links-removal.patch
 git apply ../cline-patches/015-hide-banners.patch
 git apply ../cline-patches/016-remove-devtools-script.patch
 
@@ -492,4 +482,4 @@ git apply --reject ../cline-patches/001-resonance-system.patch
 
 ---
 
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-04-03
