@@ -188,6 +188,17 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 **Files modified:**
 - `src/core/webview/WebviewProvider.ts`
 
+### 017-terminal-branding-and-icon-cleanup.patch
+**Terminal Branding + Icon Cleanup**
+- Rebrands extension-created terminals from `Cline` to `Resonance`
+- Rebrands standalone terminal labels to `Resonance Terminal N`
+- Removes custom `cline-icon` usage from VS Code terminal creation paths
+
+**Files modified:**
+- `src/hosts/vscode/hostbridge/workspace/executeCommandInTerminal.ts`
+- `src/hosts/vscode/terminal/VscodeTerminalRegistry.ts`
+- `src/integrations/terminal/standalone/StandaloneTerminalManager.ts`
+
 ## Quick Start
 
 ### Build Process
@@ -215,6 +226,7 @@ git apply ../cline-patches/012-task-header-compact.patch
 git apply ../cline-patches/013-welcome-and-navbar-simplification.patch
 git apply ../cline-patches/015-hide-banners.patch
 git apply ../cline-patches/016-remove-devtools-script.patch
+git apply ../cline-patches/017-terminal-branding-and-icon-cleanup.patch
 
 # 3. Install dependencies
 npm install
@@ -482,4 +494,4 @@ git apply --reject ../cline-patches/001-resonance-system.patch
 
 ---
 
-**Last Updated:** 2026-04-03
+**Last Updated:** 2026-04-04

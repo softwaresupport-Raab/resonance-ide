@@ -130,6 +130,28 @@ diff --git a/package.json b/package.json
 index 60249ae..5b4349a 100644
 --- a/package.json
 +++ b/package.json
+@@ -49,12 +49,3 @@
+ 	"main": "./dist/extension.js",
+ 	"contributes": {
+-		"icons": {
+-			"cline-icon": {
+-				"description": "cline",
+-				"default": {
+-					"fontPath": "assets/icons/cline-bot.woff",
+-					"fontCharacter": "\\e900"
+-				}
+-			}
+-		},
+ 		"walkthroughs": [
+@@ -174,7 +165,6 @@
+ 			{
+ 				"command": "cline.generateGitCommitMessage",
+ 				"title": "Generate Commit Message with Resonance",
+-				"category": "Resonance",
+-				"icon": "$(cline-icon)"
++				"category": "Resonance"
+ 			},
+ 			{
 @@ -279,24 +279,14 @@
  					"group": "navigation@1",
  					"when": "view == resonance.SidebarProvider"
