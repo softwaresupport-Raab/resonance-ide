@@ -611,6 +611,10 @@
   "configurationDefaults": {
     "workbench.colorTheme": "Solarized Light",
     "workbench.iconTheme": "helium-icon-theme",
+    "workbench.editorAssociations": {
+      "*.md": "cweijan.markdownViewer",
+      "*.markdown": "cweijan.markdownViewer"
+    },
     "workbench.activityBar.location": "default",
     "workbench.statusBar.visible": false,
     "workbench.sideBar.location": "left",
@@ -673,6 +677,23 @@
           "flags": ""
         },
         "publisherDisplayName": "Resonance Team"
+      }
+    },
+    {
+      "name": "softwaresupport-raab.resonance-office-viewer",
+      "version": "3.5.5",
+      "sha256": "91582a18961dff9494b19fd48d2bbd3136afc6609f84ea5b4c67de91b9032cd9",
+      "repo": "https://github.com/softwaresupport-Raab/resonance-office",
+      "vsix": "resonance/resonance-office-viewer.vsix",
+      "metadata": {
+        "id": "f2053c20-8386-5799-a98e-dbf8528bad88",
+        "publisherId": {
+          "publisherId": "280ede92-a9dc-5109-b40c-7256daa5a4b3",
+          "publisherName": "softwaresupport-raab",
+          "displayName": "Software Support Raab",
+          "flags": ""
+        },
+        "publisherDisplayName": "Software Support Raab"
       }
     },
     {

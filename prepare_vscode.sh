@@ -191,6 +191,20 @@ else
   echo "WARNING: Resonance VSIX not found — builtInExtension will be skipped at build time"
 fi
 
+OFFICE_VSIX_SRC=""
+if [[ -f "../resonance-office-viewer.vsix" ]]; then
+  OFFICE_VSIX_SRC="../resonance-office-viewer.vsix"
+elif ls ../resonance-office/resonance-office-viewer-*.vsix >/dev/null 2>&1; then
+  OFFICE_VSIX_SRC="$(ls -t ../resonance-office/resonance-office-viewer-*.vsix | head -n 1)"
+fi
+
+if [[ -n "${OFFICE_VSIX_SRC}" ]]; then
+  cp "${OFFICE_VSIX_SRC}" resonance/resonance-office-viewer.vsix
+  echo "Copied Office Viewer VSIX to resonance/resonance-office-viewer.vsix"
+else
+  echo "WARNING: Office Viewer VSIX not found — builtInExtension will be skipped at build time"
+fi
+
 for THEME_VSIX in frostedaura.vsix helium-icon-theme.vsix; do
   if [[ -f "../${THEME_VSIX}" ]]; then
     cp "../${THEME_VSIX}" "resonance/${THEME_VSIX}"
