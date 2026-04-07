@@ -21,6 +21,9 @@ on:
         type: string
         description: Checkout PR
 
+permissions:
+  contents: write
+
 env:
   APP_NAME: Resonance
   ASSETS_REPOSITORY: ${{ github.repository }}

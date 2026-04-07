@@ -18,6 +18,9 @@ on:
   schedule:
     - cron: '0 7 * * *'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-14
