@@ -199,6 +199,39 @@ This directory contains patches to rebrand Cline as **Resonance**, a project man
 - `src/hosts/vscode/terminal/VscodeTerminalRegistry.ts`
 - `src/integrations/terminal/standalone/StandaloneTerminalManager.ts`
 
+### 018-tool-notification-branding.patch
+**Tool Notification Branding Cleanup**
+- Rebrands remaining user-facing tool notifications and error strings from `Cline` to `Resonance`
+- Updates manual-approval prompts across file, command, browser, MCP, search, and bug-report tools
+- Updates VS Code review controller label to `Resonance AI Review`
+
+**Files modified:**
+- `src/core/task/index.ts`
+- `src/core/task/tools/handlers/AccessMcpResourceHandler.ts`
+- `src/core/task/tools/handlers/ApplyPatchHandler.ts`
+- `src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts`
+- `src/core/task/tools/handlers/BrowserToolHandler.ts`
+- `src/core/task/tools/handlers/CondenseHandler.ts`
+- `src/core/task/tools/handlers/ExecuteCommandToolHandler.ts`
+- `src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts`
+- `src/core/task/tools/handlers/ListFilesToolHandler.ts`
+- `src/core/task/tools/handlers/NewTaskHandler.ts`
+- `src/core/task/tools/handlers/ReadFileToolHandler.ts`
+- `src/core/task/tools/handlers/ReportBugHandler.ts`
+- `src/core/task/tools/handlers/SearchFilesToolHandler.ts`
+- `src/core/task/tools/handlers/UseMcpToolHandler.ts`
+- `src/core/task/tools/handlers/WebFetchToolHandler.ts`
+- `src/core/task/tools/handlers/WebSearchToolHandler.ts`
+- `src/core/task/tools/handlers/WriteToFileToolHandler.ts`
+- `src/hosts/vscode/review/VscodeCommentReviewController.ts`
+
+### 019-e2e-branding-assertion.patch
+**E2E Branding Assertion Fix**
+- Updates the diff e2e test to assert `Resonance` branding text instead of stale `Cline` text
+
+**Files modified:**
+- `src/test/e2e/diff.test.ts`
+
 ## Quick Start
 
 ### Build Process
@@ -227,6 +260,8 @@ git apply ../cline-patches/013-welcome-and-navbar-simplification.patch
 git apply ../cline-patches/015-hide-banners.patch
 git apply ../cline-patches/016-remove-devtools-script.patch
 git apply ../cline-patches/017-terminal-branding-and-icon-cleanup.patch
+git apply ../cline-patches/018-tool-notification-branding.patch
+git apply ../cline-patches/019-e2e-branding-assertion.patch
 
 # 3. Install dependencies
 npm install

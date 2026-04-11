@@ -1,0 +1,254 @@
+diff --git a/src/core/task/tools/handlers/AccessMcpResourceHandler.ts b/src/core/task/tools/handlers/AccessMcpResourceHandler.ts
+index 9cb7795..c87ba1b 100644
+--- a/src/core/task/tools/handlers/AccessMcpResourceHandler.ts
++++ b/src/core/task/tools/handlers/AccessMcpResourceHandler.ts
+@@ -93,7 +93,7 @@ export class AccessMcpResourceHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to access ${uri || "unknown resource"} on ${server_name || "unknown server"}`
++			const notificationMessage = `Resonance wants to access ${uri || "unknown resource"} on ${server_name || "unknown server"}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/ApplyPatchHandler.ts b/src/core/task/tools/handlers/ApplyPatchHandler.ts
+index 05eb0a5..62d85fe 100644
+--- a/src/core/task/tools/handlers/ApplyPatchHandler.ts
++++ b/src/core/task/tools/handlers/ApplyPatchHandler.ts
+@@ -714,7 +714,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
+ 			return true
+ 		}
+ 
+-		showNotificationForApproval(`Cline wants to edit '${message.path}'`, config.autoApprovalSettings.enableNotifications)
++		showNotificationForApproval(`Resonance wants to edit '${message.path}'`, config.autoApprovalSettings.enableNotifications)
+ 
+ 		await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
+ 		const { response, text, images, files } = await config.callbacks.ask("tool", completeMessage, false)
+diff --git a/src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts b/src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts
+index 4d82cdc..b6dee99 100644
+--- a/src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts
++++ b/src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts
+@@ -56,7 +56,7 @@ export class AskFollowupQuestionToolHandler implements IToolHandler, IPartialBlo
+ 		// Show notification if enabled
+ 		if (config.autoApprovalSettings.enableNotifications) {
+ 			showSystemNotification({
+-				subtitle: "Cline has a question...",
++				subtitle: "Resonance has a question...",
+ 				message: question.replace(/\n/g, " "),
+ 			})
+ 		}
+diff --git a/src/core/task/tools/handlers/BrowserToolHandler.ts b/src/core/task/tools/handlers/BrowserToolHandler.ts
+index 9571b2b..920ed9a 100644
+--- a/src/core/task/tools/handlers/BrowserToolHandler.ts
++++ b/src/core/task/tools/handlers/BrowserToolHandler.ts
+@@ -95,7 +95,7 @@ export class BrowserToolHandler implements IFullyManagedTool {
+ 				} else {
+ 					// Show notification for approval if enabled
+ 					showNotificationForApproval(
+-						`Cline wants to use a browser and launch ${url}`,
++						`Resonance wants to use a browser and launch ${url}`,
+ 						config.autoApprovalSettings.enableNotifications,
+ 					)
+ 					await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "browser_action_launch")
+diff --git a/src/core/task/tools/handlers/CondenseHandler.ts b/src/core/task/tools/handlers/CondenseHandler.ts
+index acfd777..876a43a 100644
+--- a/src/core/task/tools/handlers/CondenseHandler.ts
++++ b/src/core/task/tools/handlers/CondenseHandler.ts
+@@ -33,8 +33,8 @@ export class CondenseHandler implements IToolHandler, IPartialBlockHandler {
+ 		// Show notification if enabled
+ 		if (config.autoApprovalSettings.enableNotifications) {
+ 			showSystemNotification({
+-				subtitle: "Cline wants to condense the conversation...",
+-				message: `Cline is suggesting to condense your conversation with: ${context}`,
++				subtitle: "Resonance wants to condense the conversation...",
++				message: `Resonance is suggesting to condense your conversation with: ${context}`,
+ 			})
+ 		}
+ 
+diff --git a/src/core/task/tools/handlers/ExecuteCommandToolHandler.ts b/src/core/task/tools/handlers/ExecuteCommandToolHandler.ts
+index f7de47a..22ec440 100644
+--- a/src/core/task/tools/handlers/ExecuteCommandToolHandler.ts
++++ b/src/core/task/tools/handlers/ExecuteCommandToolHandler.ts
+@@ -191,7 +191,7 @@ export class ExecuteCommandToolHandler implements IFullyManagedTool {
+ 		} else {
+ 			// Manual approval flow
+ 			showNotificationForApproval(
+-				`Cline wants to execute a command: ${actualCommand}`,
++				`Resonance wants to execute a command: ${actualCommand}`,
+ 				config.autoApprovalSettings.enableNotifications,
+ 			)
+ 
+diff --git a/src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts b/src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts
+index cc4d6e0..7871087 100644
+--- a/src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts
++++ b/src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts
+@@ -100,7 +100,7 @@ export class ListCodeDefinitionNamesToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to analyze code definitions in ${getWorkspaceBasename(absolutePath, "ListCodeDefinitionNamesToolHandler.notification")}`
++			const notificationMessage = `Resonance wants to analyze code definitions in ${getWorkspaceBasename(absolutePath, "ListCodeDefinitionNamesToolHandler.notification")}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/ListFilesToolHandler.ts b/src/core/task/tools/handlers/ListFilesToolHandler.ts
+index dbf4e25..7818977 100644
+--- a/src/core/task/tools/handlers/ListFilesToolHandler.ts
++++ b/src/core/task/tools/handlers/ListFilesToolHandler.ts
+@@ -124,7 +124,7 @@ export class ListFilesToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to view directory ${getWorkspaceBasename(absolutePath, "ListFilesToolHandler.notification")}/`
++			const notificationMessage = `Resonance wants to view directory ${getWorkspaceBasename(absolutePath, "ListFilesToolHandler.notification")}/`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/NewTaskHandler.ts b/src/core/task/tools/handlers/NewTaskHandler.ts
+index fc6029b..1c80f5e 100644
+--- a/src/core/task/tools/handlers/NewTaskHandler.ts
++++ b/src/core/task/tools/handlers/NewTaskHandler.ts
+@@ -38,8 +38,8 @@ export class NewTaskHandler implements IToolHandler, IPartialBlockHandler {
+ 		// Show notification if enabled
+ 		if (config.autoApprovalSettings.enableNotifications) {
+ 			showSystemNotification({
+-				subtitle: "Cline wants to start a new task...",
+-				message: `Cline is suggesting to start a new task with: ${context}`,
++				subtitle: "Resonance wants to start a new task...",
++				message: `Resonance is suggesting to start a new task with: ${context}`,
+ 			})
+ 		}
+ 
+diff --git a/src/core/task/tools/handlers/ReadFileToolHandler.ts b/src/core/task/tools/handlers/ReadFileToolHandler.ts
+index 0530d1a..02e0576 100644
+--- a/src/core/task/tools/handlers/ReadFileToolHandler.ts
++++ b/src/core/task/tools/handlers/ReadFileToolHandler.ts
+@@ -115,7 +115,7 @@ export class ReadFileToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to read ${getWorkspaceBasename(absolutePath, "ReadFileToolHandler.notification")}`
++			const notificationMessage = `Resonance wants to read ${getWorkspaceBasename(absolutePath, "ReadFileToolHandler.notification")}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/ReportBugHandler.ts b/src/core/task/tools/handlers/ReportBugHandler.ts
+index 15976a2..22f2d73 100644
+--- a/src/core/task/tools/handlers/ReportBugHandler.ts
++++ b/src/core/task/tools/handlers/ReportBugHandler.ts
+@@ -68,8 +68,8 @@ export class ReportBugHandler implements IToolHandler, IPartialBlockHandler {
+ 		// Show notification if enabled
+ 		if (config.autoApprovalSettings.enableNotifications) {
+ 			showSystemNotification({
+-				subtitle: "Cline wants to create a github issue...",
+-				message: `Cline is suggesting to create a github issue with the title: ${title}`,
++				subtitle: "Resonance wants to create a github issue...",
++				message: `Resonance is suggesting to create a github issue with the title: ${title}`,
+ 			})
+ 		}
+ 
+diff --git a/src/core/task/tools/handlers/SearchFilesToolHandler.ts b/src/core/task/tools/handlers/SearchFilesToolHandler.ts
+index b290e95..521087a 100644
+--- a/src/core/task/tools/handlers/SearchFilesToolHandler.ts
++++ b/src/core/task/tools/handlers/SearchFilesToolHandler.ts
+@@ -324,7 +324,7 @@ export class SearchFilesToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to search files for ${regex}`
++			const notificationMessage = `Resonance wants to search files for ${regex}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/UseMcpToolHandler.ts b/src/core/task/tools/handlers/UseMcpToolHandler.ts
+index d237487..e0ad519 100644
+--- a/src/core/task/tools/handlers/UseMcpToolHandler.ts
++++ b/src/core/task/tools/handlers/UseMcpToolHandler.ts
+@@ -71,7 +71,7 @@ export class UseMcpToolHandler implements IFullyManagedTool {
+ 				parsedArguments = JSON.parse(mcp_arguments)
+ 			} catch (_error) {
+ 				config.taskState.consecutiveMistakeCount++
+-				await config.callbacks.say("error", `Cline tried to use ${tool_name} with an invalid JSON argument. Retrying...`)
++				await config.callbacks.say("error", `Resonance tried to use ${tool_name} with an invalid JSON argument. Retrying...`)
+ 				return formatResponse.toolError(formatResponse.invalidMcpToolArgumentError(server_name, tool_name))
+ 			}
+ 		}
+@@ -108,7 +108,7 @@ export class UseMcpToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to use ${tool_name || "unknown tool"} on ${server_name || "unknown server"}`
++			const notificationMessage = `Resonance wants to use ${tool_name || "unknown tool"} on ${server_name || "unknown server"}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/WebFetchToolHandler.ts b/src/core/task/tools/handlers/WebFetchToolHandler.ts
+index 3d8dbb5..05d9546 100644
+--- a/src/core/task/tools/handlers/WebFetchToolHandler.ts
++++ b/src/core/task/tools/handlers/WebFetchToolHandler.ts
+@@ -55,7 +55,7 @@ export class WebFetchToolHandler implements IFullyManagedTool {
+ 			const clineWebToolsEnabled = config.services.stateManager.getGlobalSettingsKey("clineWebToolsEnabled")
+ 			const featureFlagEnabled = featureFlagsService.getWebtoolsEnabled()
+ 			if (provider !== "cline" || !clineWebToolsEnabled || !featureFlagEnabled) {
+-				return formatResponse.toolError("Cline web tools are currently disabled.")
++				return formatResponse.toolError("Resonance web tools are currently disabled.")
+ 			}
+ 
+ 			// Validate required parameters
+@@ -95,7 +95,7 @@ export class WebFetchToolHandler implements IFullyManagedTool {
+ 			} else {
+ 				// Manual approval flow
+ 				showNotificationForApproval(
+-					`Cline wants to fetch content from ${url}`,
++					`Resonance wants to fetch content from ${url}`,
+ 					config.autoApprovalSettings.enableNotifications,
+ 				)
+ 				await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
+diff --git a/src/core/task/tools/handlers/WebSearchToolHandler.ts b/src/core/task/tools/handlers/WebSearchToolHandler.ts
+index 4dcb150..feab8a3 100644
+--- a/src/core/task/tools/handlers/WebSearchToolHandler.ts
++++ b/src/core/task/tools/handlers/WebSearchToolHandler.ts
+@@ -57,7 +57,7 @@ export class WebSearchToolHandler implements IFullyManagedTool {
+ 			const clineWebToolsEnabled = config.services.stateManager.getGlobalSettingsKey("clineWebToolsEnabled")
+ 			const featureFlagEnabled = featureFlagsService.getWebtoolsEnabled()
+ 			if (provider !== "cline" || !clineWebToolsEnabled || !featureFlagEnabled) {
+-				return formatResponse.toolError("Cline web tools are currently disabled.")
++				return formatResponse.toolError("Resonance web tools are currently disabled.")
+ 			}
+ 
+ 			// Validate required parameters
+@@ -103,7 +103,7 @@ export class WebSearchToolHandler implements IFullyManagedTool {
+ 			} else {
+ 				// Manual approval flow
+ 				showNotificationForApproval(
+-					`Cline wants to search for: ${query}`,
++					`Resonance wants to search for: ${query}`,
+ 					config.autoApprovalSettings.enableNotifications,
+ 				)
+ 				await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
+diff --git a/src/core/task/tools/handlers/WriteToFileToolHandler.ts b/src/core/task/tools/handlers/WriteToFileToolHandler.ts
+index e466d36..5423c10 100644
+--- a/src/core/task/tools/handlers/WriteToFileToolHandler.ts
++++ b/src/core/task/tools/handlers/WriteToFileToolHandler.ts
+@@ -194,7 +194,7 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
+ 				await setTimeoutPromise(3_500)
+ 			} else {
+ 				// Manual approval flow with detailed feedback handling
+-				const notificationMessage = `Cline wants to ${fileExists ? "edit" : "create"} ${getWorkspaceBasename(relPath, "WriteToFile.notification")}`
++				const notificationMessage = `Resonance wants to ${fileExists ? "edit" : "create"} ${getWorkspaceBasename(relPath, "WriteToFile.notification")}`
+ 
+ 				// Show notification
+ 				showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/hosts/vscode/review/VscodeCommentReviewController.ts b/src/hosts/vscode/review/VscodeCommentReviewController.ts
+index 7185631..3019a11 100644
+--- a/src/hosts/vscode/review/VscodeCommentReviewController.ts
++++ b/src/hosts/vscode/review/VscodeCommentReviewController.ts
+@@ -30,7 +30,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
+ 	constructor() {
+ 		super()
+ 		// Create the comment controller
+-		this.commentController = vscode.comments.createCommentController("cline-ai-review", "Cline AI Review")
++		this.commentController = vscode.comments.createCommentController("cline-ai-review", "Resonance AI Review")
+ 
+ 		// Configure options for the reply input
+ 		this.commentController.options = {

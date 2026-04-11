@@ -1,7 +1,16 @@
 diff --git a/src/core/task/index.ts b/src/core/task/index.ts
-index 916a541..fb4c3e7 100644
+index 916a541..fa0ec05 100644
 --- a/src/core/task/index.ts
 +++ b/src/core/task/index.ts
+@@ -824,7 +824,7 @@ export class Task {
+ 	async sayAndCreateMissingParamError(toolName: ClineDefaultTool, paramName: string, relPath?: string) {
+ 		await this.say(
+ 			"error",
+-			`Cline tried to use ${toolName}${
++			`Resonance tried to use ${toolName}${
+ 				relPath ? ` for '${relPath.toPosix()}'` : ""
+ 			} without value for required parameter '${paramName}'. Retrying...`,
+ 		)
 @@ -1735,31 +1735,44 @@ export class Task {
  			isSubagentsEnabledAndCliInstalled = subagentsEnabled && clineCliInstalled
  		}
@@ -87,3 +96,21 @@ index 916a541..fb4c3e7 100644
  		const cap = 50
  		const editorTabs = {
  			open: openTabPaths.slice(0, cap),
+@@ -2229,14 +2241,14 @@ export class Task {
+ 			if (autoApprovalSettings.enableNotifications) {
+ 				showSystemNotification({
+ 					subtitle: "Error",
+-					message: "Cline is having trouble. Would you like to continue the task?",
++					message: "Resonance is having trouble. Would you like to continue the task?",
+ 				})
+ 			}
+ 			const { response, text, images, files } = await this.ask(
+ 				"mistake_limit_reached",
+ 				this.api.getModel().id.includes("claude")
+-					? `This may indicate a failure in Cline's thought process or inability to use a tool properly, which can be mitigated with some user guidance (e.g. "Try breaking down the task into smaller steps").`
+-					: "Cline uses complex prompts and iterative task execution that may be challenging for less capable models. For best results, it's recommended to use Claude 4 Sonnet for its advanced agentic coding capabilities.",
++					? `This may indicate a failure in Resonance's thought process or inability to use a tool properly, which can be mitigated with some user guidance (e.g. "Try breaking down the task into smaller steps").`
++					: "Resonance uses complex prompts and iterative task execution that may be challenging for less capable models. For best results, it's recommended to use Claude 4 Sonnet for its advanced agentic coding capabilities.",
+ 			)
+ 			if (response === "messageResponse") {
+ 				// Display the user's message in the chat UI
