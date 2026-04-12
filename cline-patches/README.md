@@ -1,532 +1,67 @@
 # Resonance Patches for Cline
 
-This directory contains patches to rebrand Cline as **Resonance**, a project management assistant with persistent memory and state machine philosophy.
+Patches to rebrand and customize Cline as Resonance, applied on top of Cline v3.78.0.
 
-## Patches Overview
+## Base Version
 
-### 001-resonance-system.patch
-**System Prompt & Identity**
-- Changes agent identity from "Cline, software engineer" to "Resonance, experience assistant"
-- Replaces coding-focused rules with Resonance's persistent memory system
-- Implements State Machine philosophy with `.resonance/` directory structure
-- Adds memory management rules (00_soul.md, 01_state.md, 02_memory.md)
-- Introduces The Synch Rule (Micro vs Macro task management)
-- Incremental Work Protocol — one tool use at a time with user confirmation
+Cline v3.78.0 (tag v3.78.0)
 
-**Files modified:**
-- `src/core/prompts/system-prompt/components/agent_role.ts`
-- `src/core/prompts/system-prompt/components/rules.ts`
+## Patches
 
-### 002-ui-branding.patch
-**User Interface & Branding**
-- Changes all user-facing "Cline" references to "Resonance"
-- Updates package.json metadata (displayName, publisher, description, keywords)
-- Fixes view container IDs (`claude-dev` → `resonance`) for sidebar activation
-- Rewrites complete walkthrough for Resonance concepts
-- Updates all command titles, menu items, and chat UI strings
+### 001-system-prompt.patch (2 files)
+Agent identity and memory system.
 
-**Files modified:**
-- `package.json`
-- `walkthrough/step1.md` through `step5.md`
-- `webview-ui/src/components/chat/ChatRow.tsx`
-- `webview-ui/src/components/settings/sections/AboutSection.tsx`
-- `webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx`
+### 002-branding.patch (49 files)
+All user-facing Cline -> Resonance branding updates.
 
-### 002-scroll-behavior-fix.patch
-**Chat Scroll Behavior**
-- Fixes scroll-to-bottom behavior in the chat view
+### 003-commands.patch (4 files)
+Resonance slash commands: /setup and /demo.
 
-**Files modified:**
-- `webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts`
+### 004-ui-customization.patch (19 files)
+Compact task header, context ring, auto-approve in settings, navbar simplification, thinking indicator, and related UI behavior.
 
-### 003-deep-branding.patch
-**Deep Branding, Bug Fixes & UI Cleanup**
-- Fixes extension activation crash: command prefix mismatch (`registry.ts`)
-- Rebrands onboarding flow, startup tips, WhatsNew modal, Welcome view
-- Fixes all remaining "Cline" strings across chat UI and settings
+### 005-defaults-and-infra.patch (6 files)
+Default settings and infrastructure fixes (codicon path, devtools script removal, sidebar focus).
 
-**Files modified:**
-- `src/registry.ts`, `src/common.ts`, `src/shared/cline/banner.ts`
-- Multiple `webview-ui/src/components/...` files
-
-### 003-thinking-indicator.patch
-**Thinking Indicator**
-- Adds visual thinking indicator to the chat text area
-
-**Files modified:**
-- `webview-ui/src/components/chat/ChatTextArea.tsx`
-
-### 004-resonance-defaults.patch
-**Default Settings for Resonance**
-- Disables checkpoints by default
-- Enables "Edit project files" auto-approve by default
-
-**Files modified:**
-- `src/shared/storage/state-keys.ts`
-- `webview-ui/src/context/ExtensionStateContext.tsx`
-- `src/shared/AutoApprovalSettings.ts`
-
-### 005-hide-cost-display.patch
-**Hide Cost Bubbles**
-- Removes cost chips from task/history previews
-
-**Files modified:**
-- `webview-ui/src/components/history/HistoryPreview.tsx`
-- `webview-ui/src/components/history/HistoryViewItem.tsx`
-
-### 006-preflight-parallelization.patch
-**Faster Request Preflight**
-- Parallelizes rules/skills/tabs preflight via `Promise.all` — reduces time-to-first-token
-
-**Files modified:**
-- `src/core/task/index.ts`
-
-### 007-auto-focus-sidebar.patch
-**Auto-focus Sidebar on Startup**
-- Automatically focuses the Resonance sidebar when the extension activates
-
-**Files modified:**
-- `src/extension.ts`
-
-### 008-resonance-commands.patch
-**Resonance Command Palette**
-- Adds custom Resonance-specific slash commands and command palette actions
-
-**Files modified:**
-- `src/core/prompts/commands.ts`
-- `src/core/slash-commands/index.ts`
-- `src/shared/slashCommands.ts`
-- `webview-ui/src/utils/slash-commands.ts`
-- `webview-ui/vite.config.ts`
-
-### 009-uncaptured-branding.patch
-**Remaining Branding Cleanup**
-- Fixes all remaining "Cline" strings across settings, history, welcome, and modals
-
-**Files modified:**
-- `proto/cline/account.proto`
-- `webview-ui/src/components/chat/ChatTextArea.tsx`
-- `webview-ui/src/components/chat/ErrorRow.tsx`
-- `webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts`
-- `webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx`
-- `webview-ui/src/components/common/TelemetryBanner.tsx`
-- `webview-ui/src/components/common/WhatsNewModal.tsx`
-- `webview-ui/src/components/settings/ClineAccountInfoCard.tsx`
-- `webview-ui/src/components/settings/SettingsView.tsx`
-- `webview-ui/src/components/settings/sections/AboutSection.tsx`
-- `webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx`
-- `webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx`
-- `webview-ui/src/components/welcome/SuggestedTasks.tsx`
-- `webview-ui/src/components/welcome/WelcomeView.tsx`
-
-### 010-codicon-font-path-fix.patch
-**Codicon Font Path Fix**
-- Fixes codicon font path resolution in the webview
-
-**Files modified:**
-- `webview-ui/vite.config.ts` (font path alias)
-
-### 011-auto-approve-settings.patch
-**Auto-approve Controls Moved to Settings**
-- Removes the auto-approve footer bar from the chat view (both webview and CLI)
-- Adds a dedicated **Auto-approve** section to Settings → Features with:
-  - Master "Auto-approve Everything" toggle
-  - Granular per-action toggles: Read Files, Edit Files, Execute Commands, Browser, MCP
-  - Sub-action toggles for each (e.g. Read External Files, Execute All Commands)
-  - Notifications toggle
-- Fixes state propagation: `autoApproveAllToggled` included in `getStateToPostToWebview()`
-
-**Files modified:**
-- `cli/src/components/ChatView.tsx`
-- `cli/src/components/ChatView.test.tsx`
-- `cli/src/components/SettingsPanelContent.tsx`
-- `src/core/controller/index.ts`
-- `src/shared/ExtensionMessage.ts`
-
-### 012-task-header-compact.patch
-**Compact Task Header + Context Ring**
-- Simplifies the chat task header to a single compact row (no accordion behavior)
-- Replaces the large context progress bar with a compact circular context ring indicator
-- Moves context details and compact-task action into hover summary content
-- Replaces New Task `X` icon with a create-semantic icon and updated tooltip/aria label
-
-**Files modified:**
-- `webview-ui/src/components/chat/task-header/TaskHeader.tsx`
-- `webview-ui/src/components/chat/task-header/ContextWindow.tsx`
-- `webview-ui/src/components/chat/task-header/ContextWindowRing.tsx` (new file)
-- `webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx`
-- `webview-ui/src/components/chat/task-header/buttons/NewTaskButton.tsx`
-- `webview-ui/src/components/chat/task-header/TaskHeader.stories.tsx`
-
-### 013-welcome-and-navbar-simplification.patch
-**CLI Welcome Cleanup + Minimal Navbar**
-- Removes the ASCII Cline logo from the CLI welcome screen
-- Hides the Plan/Act mode switch UI in CLI welcome, showing only the current model
-- Simplifies the webview top navbar to only New Task, History, and Settings
-- Hides the footer Plan/Act switch in the webview chat input area
-
-**Files modified:**
-- `package.json`
-- `cli/src/components/WelcomeView.tsx`
-- `webview-ui/src/components/menu/Navbar.tsx`
-- `webview-ui/src/components/welcome/WelcomeView.tsx`
-- `webview-ui/src/components/welcome/HomeHeader.tsx`
-- `webview-ui/src/components/chat/ChatTextArea.tsx`
-
-### 015-hide-banners.patch
-**Hide All Welcome Banners**
-- Empties `BANNER_DATA` so no banners are shown in the Welcome view
-
-**Files modified:**
-- `src/shared/cline/banner.ts`
-
-### 016-remove-devtools-script.patch
-**Remove React DevTools Script from Production**
-- Removes leftover `<script src="http://localhost:8097">` (React DevTools) from the webview HTML template
-- This script was blocked by CSP in production and caused console errors on every webview load
-
-**Files modified:**
-- `src/core/webview/WebviewProvider.ts`
-
-### 017-terminal-branding-and-icon-cleanup.patch
-**Terminal Branding + Icon Cleanup**
-- Rebrands extension-created terminals from `Cline` to `Resonance`
-- Rebrands standalone terminal labels to `Resonance Terminal N`
-- Removes custom `cline-icon` usage from VS Code terminal creation paths
-
-**Files modified:**
-- `src/hosts/vscode/hostbridge/workspace/executeCommandInTerminal.ts`
-- `src/hosts/vscode/terminal/VscodeTerminalRegistry.ts`
-- `src/integrations/terminal/standalone/StandaloneTerminalManager.ts`
-
-### 018-tool-notification-branding.patch
-**Tool Notification Branding Cleanup**
-- Rebrands remaining user-facing tool notifications and error strings from `Cline` to `Resonance`
-- Updates manual-approval prompts across file, command, browser, MCP, search, and bug-report tools
-- Updates VS Code review controller label to `Resonance AI Review`
-
-**Files modified:**
-- `src/core/task/index.ts`
-- `src/core/task/tools/handlers/AccessMcpResourceHandler.ts`
-- `src/core/task/tools/handlers/ApplyPatchHandler.ts`
-- `src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts`
-- `src/core/task/tools/handlers/BrowserToolHandler.ts`
-- `src/core/task/tools/handlers/CondenseHandler.ts`
-- `src/core/task/tools/handlers/ExecuteCommandToolHandler.ts`
-- `src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts`
-- `src/core/task/tools/handlers/ListFilesToolHandler.ts`
-- `src/core/task/tools/handlers/NewTaskHandler.ts`
-- `src/core/task/tools/handlers/ReadFileToolHandler.ts`
-- `src/core/task/tools/handlers/ReportBugHandler.ts`
-- `src/core/task/tools/handlers/SearchFilesToolHandler.ts`
-- `src/core/task/tools/handlers/UseMcpToolHandler.ts`
-- `src/core/task/tools/handlers/WebFetchToolHandler.ts`
-- `src/core/task/tools/handlers/WebSearchToolHandler.ts`
-- `src/core/task/tools/handlers/WriteToFileToolHandler.ts`
-- `src/hosts/vscode/review/VscodeCommentReviewController.ts`
-
-### 019-e2e-branding-assertion.patch
-**E2E Branding Assertion Fix**
-- Updates the diff e2e test to assert `Resonance` branding text instead of stale `Cline` text
-
-**Files modified:**
-- `src/test/e2e/diff.test.ts`
+### 006-e2e-tests.patch (1 file)
+Branding assertion update in e2e tests.
 
 ## Quick Start
 
-### Build Process
-
 ```bash
-# 1. Clone Cline at pinned version
-git clone --depth 1 --branch v3.57.1 https://github.com/cline/cline.git resonance-extension
+# 1. Clone upstream base
+git clone --depth 1 --branch v3.78.0 https://github.com/cline/cline.git resonance-extension
 cd resonance-extension
 
 # 2. Apply patches in order
-git apply ../cline-patches/001-resonance-system.patch
-git apply ../cline-patches/002-ui-branding.patch
-git apply ../cline-patches/002-scroll-behavior-fix.patch
-git apply ../cline-patches/003-deep-branding.patch
-git apply ../cline-patches/003-thinking-indicator.patch
-git apply ../cline-patches/004-resonance-defaults.patch
-git apply ../cline-patches/005-hide-cost-display.patch
-git apply ../cline-patches/006-preflight-parallelization.patch
-git apply ../cline-patches/007-auto-focus-sidebar.patch
-git apply ../cline-patches/008-resonance-commands.patch
-git apply ../cline-patches/009-uncaptured-branding.patch
-git apply ../cline-patches/010-codicon-font-path-fix.patch
-git apply ../cline-patches/011-auto-approve-settings.patch
-git apply ../cline-patches/012-task-header-compact.patch
-git apply ../cline-patches/013-welcome-and-navbar-simplification.patch
-git apply ../cline-patches/015-hide-banners.patch
-git apply ../cline-patches/016-remove-devtools-script.patch
-git apply ../cline-patches/017-terminal-branding-and-icon-cleanup.patch
-git apply ../cline-patches/018-tool-notification-branding.patch
-git apply ../cline-patches/019-e2e-branding-assertion.patch
+git apply ../cline-patches/001-system-prompt.patch
+git apply ../cline-patches/002-branding.patch
+git apply ../cline-patches/003-commands.patch
+git apply ../cline-patches/004-ui-customization.patch
+git apply ../cline-patches/005-defaults-and-infra.patch
+git apply ../cline-patches/006-e2e-tests.patch
 
-# 3. Install dependencies
+# 3. Install and build
 npm install
-
-# 4. Build the extension
 npx @vscode/vsce package
-
-# Result: resonance-3.57.1.vsix
 ```
 
-### Installation
+## With Commit History
 
 ```bash
-code --install-extension resonance-3.57.1.vsix
+git am ../cline-patches/001-system-prompt.patch
+git am ../cline-patches/002-branding.patch
+git am ../cline-patches/003-commands.patch
+git am ../cline-patches/004-ui-customization.patch
+git am ../cline-patches/005-defaults-and-infra.patch
+git am ../cline-patches/006-e2e-tests.patch
 ```
 
-### Dev Loop (how to make changes and ship them)
-
-This is the full workflow every time you add or change anything in `resonance-extension/`.
-
-#### Step 1 — Edit files in resonance-extension/
-
-Work directly in `/resonance/resonance-extension/`. The dev preview loads this folder from source
-via `--extensionDevelopmentPath`.
-
-### Local UI Preview (validated workflow)
-
-Use this exact flow when changing webview UI files (`webview-ui/src/**`):
-
-```bash
-# Terminal A (optional, for extension host changes in src/**)
-cd /Users/jmat/Github/resonance/resonance-extension
-npm run watch
-
-# Build webview assets after UI changes (required)
-cd /Users/jmat/Github/resonance/resonance-extension
-npm run build:webview
-
-# Terminal B
-cd /Users/jmat/Github/resonance
-./dev-preview.sh
-```
-
-Important:
-- `npm run watch` does **not** rebuild `webview-ui/build` for TSX/CSS webview changes.
-- For task-header/chat/settings UI changes, always run `npm run build:webview` before relaunching preview.
-- If you also changed extension host code (`src/**`), run `node esbuild.mjs` to recompile `dist/extension.js`.
-- If you still see stale UI, clear dev cache and restart preview:
-
-```bash
-cd /Users/jmat/Github/resonance
-rm -rf .resonance-dev-data/Cache \
-  .resonance-dev-data/GPUCache \
-  ".resonance-dev-data/Code Cache" \
-  ".resonance-dev-data/Service Worker" \
-  .resonance-dev-data/User/workspaceStorage
-./dev-preview.sh
-```
-
-Sanity check:
-- `./dev-preview.sh` = source-loaded extension preview (not VSIX install testing).
-- VSIX behavior is only verified after packaging and copying `resonance.vsix` into `resonance-ide/`.
-
-Quick launch (after build):
-
-```bash
-cd /resonance
-./dev-preview.sh          # launches VS Code with the extension loaded from source
-```
-
-#### Step 2 — Figure out which patch owns the changed files
-
-Each patch owns a specific set of files. Before generating patches, check whether the file you
-changed is already owned by an existing patch, or if you need a new one.
-
-```bash
-# See which files each existing patch touches:
-grep "^diff --git" resonance-ide/cline-patches/*.patch | sed 's|.*diff --git a/||;s| b/.*||'
-
-# See which of YOUR changed files are NOT yet in any patch:
-cd resonance-extension
-git diff --name-only | sort > /tmp/changed.txt
-grep "^diff --git" ../resonance-ide/cline-patches/*.patch \
-  | sed 's|.*diff --git a/||;s| b/.*||' | sort > /tmp/patched.txt
-comm -23 /tmp/changed.txt /tmp/patched.txt   # files not yet in any patch → need a new patch
-```
-
-#### Step 3 — Regenerate affected patches
-
-For each patch that owns a file you changed, regenerate it by scoping `git diff` to exactly
-the files that patch owns:
+## Regenerating Patches
 
 ```bash
 cd resonance-extension
-
-# Example: you changed FeatureSettingsSection.tsx (owned by 009):
-git diff -- \
-  proto/cline/account.proto \
-  webview-ui/src/components/chat/ChatTextArea.tsx \
-  webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx \
-  # ... all other files owned by 009 ...
-  > ../resonance-ide/cline-patches/009-uncaptured-branding.patch
+# Ensure branch has exactly the 6 topic commits on top of v3.78.0
+git format-patch v3.78.0..HEAD -o ../resonance-ide/cline-patches/
+# Rename 0001-*.patch -> 001-system-prompt.patch, etc.
 ```
-
-> **Rule:** Always scope `git diff` to the exact files listed under "Files modified" for that
-> patch — never dump the entire working tree into one patch.
-
-#### Step 4 — Create a new patch for genuinely new files
-
-If you added or changed files that no existing patch owns, create a new numbered patch:
-
-```bash
-cd resonance-extension
-
-# Pick the next available number (check ls resonance-ide/cline-patches/)
-git diff -- \
-  path/to/new-file1.ts \
-  path/to/new-file2.tsx \
-  > ../resonance-ide/cline-patches/012-your-feature-name.patch
-```
-
-Add the new patch to the apply-order list in this README and document it in the Patches Overview.
-
-#### Step 5 — Build the VSIX
-
-```bash
-cd resonance-extension
-npm run build:webview          # rebuild the webview UI
-npx @vscode/vsce package \
-  --no-dependencies --skip-license \
-  -o resonance-3.57.1.vsix
-```
-
-#### Step 6 — Copy VSIX to resonance-ide
-
-The CI pipeline (`prepare_vscode.sh`) looks for `resonance-ide/resonance.vsix`. Always overwrite
-this file with the freshly built VSIX:
-
-```bash
-cp resonance-extension/resonance-3.57.1.vsix resonance-ide/resonance.vsix
-```
-
-> **Why?** The CI never runs `npm install` + `vsce package` itself — it takes the pre-built VSIX
-> from this repo. If you forget this step, the installer will ship the old extension.
-
-#### Step 7 — Commit everything in resonance-ide
-
-```bash
-cd resonance-ide
-git add cline-patches/*.patch resonance.vsix
-git commit -m "feat: describe your change"
-git push
-```
-
-This triggers GitHub Actions to build macOS / Windows / Linux installers (~45 min).
-
-## What Changed
-
-### Identity & Philosophy
-| Before (Cline) | After (Resonance) |
-|----------------|-------------------|
-| Autonomous coding agent | Project management assistant |
-| Software engineer persona | Experience assistant persona |
-| File editing focus | State management focus |
-| Coding-centric rules | Memory & knowledge management |
-
-### System Prompt Changes
-
-**Removed:**
-- Coding-specific rules (project structure, type checking, linters)
-- "Create new project" guidance
-- Browser automation for web testing
-- Development-focused tool usage
-
-**Added:**
-- **THE PRIME DIRECTIVE:** You are NOT a chat bot. You are a State Machine.
-- **Persistent Memory System:** `.resonance/` directory (00_soul.md, 01_state.md, 02_memory.md)
-- **The Synch Rule:** Micro-tasks in chat, Macro-state in 01_state.md
-- **Knowledge Management:** docs/ for specs, 03_backlog.md for TODOs
-- **Doc Frontmatter Protocol:** YAML frontmatter with `read_when:` conditions
-- **State Machine Thinking:** Current state → Transitions → Goal state
-
-**Kept:**
-- Tool usage rules (file operations, terminal commands)
-- Working directory constraints
-- Communication style (direct, no "Great/Certainly")
-- Environment details handling
-- MCP integration
-
-### Walkthrough Changes
-
-**Old (Cline):**
-1. Agentic Planning
-2. Deep Codebase Intelligence
-3. Best AI Models
-4. MCP Tools
-5. Full Visibility & Control
-
-**New (Resonance):**
-1. **State Machine, Not Chatbot** - Persistent memory in .resonance/
-2. **Persistent Memory System** - 00_soul.md, 01_state.md, 02_memory.md
-3. **The Synch Rule** - Micro vs Macro task management
-4. **Knowledge Management** - docs/ and backlog organization
-5. **You're in Control** - BYOK, transparency, review changes
-
-### Metadata Changes
-
-```json
-{
-  "name": "resonance",
-  "displayName": "Resonance",
-  "publisher": "resonance-team",
-  "description": "Your project management assistant with persistent memory...",
-  "repository": "https://github.com/resonance/resonance",
-  "homepage": "https://resonance.app",
-  "keywords": [
-    "resonance", "project-management", "state-machine",
-    "memory", "work-packages", "knowledge-management",
-    "ai-assistant", "persistent-memory", "task-management"
-  ]
-}
-```
-
-## Resonance Memory System
-
-### Directory Structure
-```
-.resonance/
-├── 00_soul.md         # Project vision and North Star
-├── 01_state.md        # Current work package, goals, next steps
-├── 02_memory.md       # Immutable log of lessons learned
-└── 03_backlog.md      # Quick TODOs and ideas
-
-docs/
-├── research/          # Research documents
-├── assets/            # Project assets
-└── strategy/          # Strategic planning docs
-```
-
-### Session Workflow
-1. **On Session Start:** Read `.resonance/01_state.md`
-2. **During Work:** Manage micro-tasks in chat
-3. **At Milestones:** Update `01_state.md` with macro-state
-4. **When Learning:** Log to `02_memory.md` with problem/solution/reference
-5. **Quick Ideas:** Add to `03_backlog.md`
-
-## Maintenance
-
-### Updating to a newer Cline version
-
-```bash
-# 1. Clone the new version
-git clone --depth 1 --branch vX.Y.Z https://github.com/cline/cline.git /tmp/cline-update
-cd /tmp/cline-update
-
-# 2. Check patches apply cleanly
-git apply --check ../cline-patches/001-resonance-system.patch
-# ... repeat for each patch
-
-# 3. If conflicts occur, use --reject to apply partially, fix .rej files manually
-git apply --reject ../cline-patches/001-resonance-system.patch
-
-# 4. Once all patches apply, swap resonance-extension/ with the new clone
-```
-
----
-
-**Last Updated:** 2026-04-04

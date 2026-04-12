@@ -1,0 +1,354 @@
+From 2a512c5e6220bd1a2a04133089582aeee1ea1105 Mon Sep 17 00:00:00 2001
+From: jmat <jens.mattke@raab.de>
+Date: Sun, 12 Apr 2026 14:21:09 +0200
+Subject: [PATCH 5/6] 005-defaults-and-infra: Default settings, codicon fix,
+ devtools removal
+
+- Checkpoints disabled by default
+- Edit project files auto-approve enabled by default
+- Auto-focus sidebar on startup
+- Codicon font path fix in Vite config
+- Remove React DevTools script from production HTML
+---
+ src/core/webview/WebviewProvider.ts           |  1 -
+ src/extension.ts                              |  3 +
+ src/shared/AutoApprovalSettings.ts            |  2 +-
+ src/shared/storage/state-keys.ts              | 36 +++++-----
+ .../src/context/ExtensionStateContext.tsx     | 65 +++++--------------
+ webview-ui/vite.config.ts                     |  3 +-
+ 6 files changed, 40 insertions(+), 70 deletions(-)
+
+diff --git a/src/core/webview/WebviewProvider.ts b/src/core/webview/WebviewProvider.ts
+index 9870bdb89..18ac2ba67 100644
+--- a/src/core/webview/WebviewProvider.ts
++++ b/src/core/webview/WebviewProvider.ts
+@@ -123,7 +123,6 @@ export abstract class WebviewProvider {
+ 				<noscript>You need to enable JavaScript to run this app.</noscript>
+ 				<div id="root"></div>
+ 				<script type="module" nonce="${nonce}" src="${scriptUrl}"></script>
+-				<script src="http://localhost:8097"></script> 
+ 			</body>
+ 		</html>
+ 		`
+diff --git a/src/extension.ts b/src/extension.ts
+index f30014430..18c09435c 100644
+--- a/src/extension.ts
++++ b/src/extension.ts
+@@ -121,6 +121,9 @@ export async function activate(context: vscode.ExtensionContext) {
+ 		}),
+ 	)
+ 
++	// Auto-reveal the Resonance sidebar view on startup
++	vscode.commands.executeCommand(`${VscodeWebviewProvider.SIDEBAR_ID}.focus`)
++
+ 	// NOTE: Commands must be added to the internal registry before registering them with VSCode
+ 	const { commands } = ExtensionRegistryInfo
+ 
+diff --git a/src/shared/AutoApprovalSettings.ts b/src/shared/AutoApprovalSettings.ts
+index 7ea185e23..22c0f6658 100644
+--- a/src/shared/AutoApprovalSettings.ts
++++ b/src/shared/AutoApprovalSettings.ts
+@@ -33,7 +33,7 @@ export const DEFAULT_AUTO_APPROVAL_SETTINGS: AutoApprovalSettings = {
+ 	actions: {
+ 		readFiles: true,
+ 		readFilesExternally: false,
+-		editFiles: false,
++		editFiles: true, // Resonance: true by default — non-dev users expect seamless document edits without approval prompts
+ 		editFilesExternally: false,
+ 		executeSafeCommands: true,
+ 		executeAllCommands: false,
+diff --git a/src/shared/storage/state-keys.ts b/src/shared/storage/state-keys.ts
+index c044f86a8..b748a81e2 100644
+--- a/src/shared/storage/state-keys.ts
++++ b/src/shared/storage/state-keys.ts
+@@ -1,24 +1,24 @@
+-import { AutoApprovalSettings, DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
++import { type AutoApprovalSettings, DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
+ import {
+-	ApiProvider,
++	type ApiProvider,
+ 	DEFAULT_API_PROVIDER,
+-	LiteLLMModelInfo,
+-	ModelInfo,
++	type LiteLLMModelInfo,
++	type ModelInfo,
+ 	type OcaModelInfo,
+-	OpenAiCompatibleModelInfo,
++	type OpenAiCompatibleModelInfo,
+ } from "@shared/api"
+-import { BrowserSettings, DEFAULT_BROWSER_SETTINGS } from "@shared/BrowserSettings"
+-import { ClineRulesToggles } from "@shared/cline-rules"
+-import { DEFAULT_FOCUS_CHAIN_SETTINGS, FocusChainSettings } from "@shared/FocusChainSettings"
+-import { HistoryItem } from "@shared/HistoryItem"
+-import { DEFAULT_MCP_DISPLAY_MODE, McpDisplayMode } from "@shared/McpDisplayMode"
+-import { WorkspaceRoot } from "@shared/multi-root/types"
+-import { GlobalInstructionsFile } from "@shared/remote-config/schema"
+-import { Mode } from "@shared/storage/types"
+-import { TelemetrySetting } from "@shared/TelemetrySetting"
+-import { UserInfo } from "@shared/UserInfo"
+-import { LanguageModelChatSelector } from "vscode"
+-import { BlobStoreSettings } from "./ClineBlobStorage"
++import { type BrowserSettings, DEFAULT_BROWSER_SETTINGS } from "@shared/BrowserSettings"
++import type { ClineRulesToggles } from "@shared/cline-rules"
++import { DEFAULT_FOCUS_CHAIN_SETTINGS, type FocusChainSettings } from "@shared/FocusChainSettings"
++import type { HistoryItem } from "@shared/HistoryItem"
++import { DEFAULT_MCP_DISPLAY_MODE, type McpDisplayMode } from "@shared/McpDisplayMode"
++import type { WorkspaceRoot } from "@shared/multi-root/types"
++import type { GlobalInstructionsFile } from "@shared/remote-config/schema"
++import type { Mode } from "@shared/storage/types"
++import type { TelemetrySetting } from "@shared/TelemetrySetting"
++import type { UserInfo } from "@shared/UserInfo"
++import type { LanguageModelChatSelector } from "vscode"
++import type { BlobStoreSettings } from "./ClineBlobStorage"
+ 
+ // ============================================================================
+ // SINGLE SOURCE OF TRUTH FOR STORAGE KEYS
+@@ -253,7 +253,7 @@ const USER_SETTINGS_FIELDS = {
+ 	},
+ 	telemetrySetting: { default: "unset" as TelemetrySetting },
+ 	planActSeparateModelsSetting: { default: false as boolean, isComputed: true },
+-	enableCheckpointsSetting: { default: true as boolean },
++	enableCheckpointsSetting: { default: false as boolean }, // Resonance: disabled by default — reduces friction for non-technical users
+ 	shellIntegrationTimeout: { default: 4000 as number },
+ 	defaultTerminalProfile: { default: "default" as string },
+ 	terminalOutputLineLimit: { default: 500 as number },
+diff --git a/webview-ui/src/context/ExtensionStateContext.tsx b/webview-ui/src/context/ExtensionStateContext.tsx
+index 3ed9316d6..68679e6f7 100644
+--- a/webview-ui/src/context/ExtensionStateContext.tsx
++++ b/webview-ui/src/context/ExtensionStateContext.tsx
+@@ -7,7 +7,7 @@ import { DEFAULT_MCP_DISPLAY_MODE } from "@shared/McpDisplayMode"
+ import type { UserInfo } from "@shared/proto/cline/account"
+ import { EmptyRequest } from "@shared/proto/cline/common"
+ import type { OpenRouterCompatibleModelInfo } from "@shared/proto/cline/models"
+-import { OnboardingModelGroup, type TerminalProfile } from "@shared/proto/cline/state"
++import type { OnboardingModelGroup, TerminalProfile } from "@shared/proto/cline/state"
+ import { convertProtoToClineMessage } from "@shared/proto-conversions/cline-message"
+ import { convertProtoMcpServersToMcpServers } from "@shared/proto-conversions/mcp/mcp-server-conversion"
+ import { fromProtobufModels } from "@shared/proto-conversions/models/typeConversion"
+@@ -241,7 +241,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 		telemetrySetting: "unset",
+ 		distinctId: "",
+ 		planActSeparateModelsSetting: true,
+-		enableCheckpointsSetting: true,
++		enableCheckpointsSetting: false, // Resonance: matches state-keys default
+ 		mcpDisplayMode: DEFAULT_MCP_DISPLAY_MODE,
+ 		globalClineRulesToggles: {},
+ 		localClineRulesToggles: {},
+@@ -262,6 +262,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 		mcpResponsesCollapsed: false, // Default value (expanded), will be overwritten by extension state
+ 		strictPlanModeEnabled: false,
+ 		yoloModeToggled: false,
++		autoApproveAllToggled: false,
+ 		customPrompt: undefined,
+ 		useAutoCondense: false,
+ 		subagentsEnabled: false,
+@@ -358,6 +359,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 				if (response.stateJson) {
+ 					try {
+ 						const stateData = JSON.parse(response.stateJson) as ExtensionState
++
+ 						setState((prevState) => {
+ 							// Versioning logic for autoApprovalSettings
+ 							const incomingVersion = stateData.autoApprovalSettings?.version ?? 1
+@@ -392,17 +394,13 @@ export const ExtensionStateContextProvider: React.FC<{
+ 						})
+ 					} catch (error) {
+ 						console.error("Error parsing state JSON:", error)
+-						console.log("[DEBUG] ERR getting state", error)
+ 					}
+ 				}
+-				console.log('[DEBUG] ended "got subscribed state"')
+ 			},
+ 			onError: (error) => {
+ 				console.error("Error in state subscription:", error)
+ 			},
+-			onComplete: () => {
+-				console.log("State subscription completed")
+-			},
++			onComplete: () => {},
+ 		})
+ 
+ 		// Subscribe to MCP button clicked events with webview type
+@@ -410,15 +408,12 @@ export const ExtensionStateContextProvider: React.FC<{
+ 			{},
+ 			{
+ 				onResponse: () => {
+-					console.log("[DEBUG] Received mcpButtonClicked event from gRPC stream")
+ 					navigateToMcp()
+ 				},
+ 				onError: (error) => {
+ 					console.error("Error in mcpButtonClicked subscription:", error)
+ 				},
+-				onComplete: () => {
+-					console.log("mcpButtonClicked subscription completed")
+-				},
++				onComplete: () => {},
+ 			},
+ 		)
+ 
+@@ -427,16 +422,12 @@ export const ExtensionStateContextProvider: React.FC<{
+ 			{},
+ 			{
+ 				onResponse: () => {
+-					// When history button is clicked, navigate to history view
+-					console.log("[DEBUG] Received history button clicked event from gRPC stream")
+ 					navigateToHistory()
+ 				},
+ 				onError: (error) => {
+ 					console.error("Error in history button clicked subscription:", error)
+ 				},
+-				onComplete: () => {
+-					console.log("History button clicked subscription completed")
+-				},
++				onComplete: () => {},
+ 			},
+ 		)
+ 
+@@ -445,8 +436,6 @@ export const ExtensionStateContextProvider: React.FC<{
+ 			{},
+ 			{
+ 				onResponse: () => {
+-					// When chat button is clicked, navigate to chat
+-					console.log("[DEBUG] Received chat button clicked event from gRPC stream")
+ 					navigateToChat()
+ 				},
+ 				onError: (error) => {
+@@ -459,7 +448,6 @@ export const ExtensionStateContextProvider: React.FC<{
+ 		// Subscribe to MCP servers updates
+ 		mcpServersSubscriptionRef.current = McpServiceClient.subscribeToMcpServers(EmptyRequest.create(), {
+ 			onResponse: (response) => {
+-				console.log("[DEBUG] Received MCP servers update from gRPC stream")
+ 				if (response.mcpServers) {
+ 					setMcpServers(convertProtoMcpServersToMcpServers(response.mcpServers))
+ 				}
+@@ -467,9 +455,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 			onError: (error) => {
+ 				console.error("Error in MCP servers subscription:", error)
+ 			},
+-			onComplete: () => {
+-				console.log("MCP servers subscription completed")
+-			},
++			onComplete: () => {},
+ 		})
+ 
+ 		// Set up settings button clicked subscription
+@@ -481,9 +467,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 			onError: (error) => {
+ 				console.error("Error in settings button clicked subscription:", error)
+ 			},
+-			onComplete: () => {
+-				console.log("Settings button clicked subscription completed")
+-			},
++			onComplete: () => {},
+ 		})
+ 
+ 		// Set up worktrees button clicked subscription
+@@ -497,9 +481,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 				onError: (error) => {
+ 					console.error("Error in worktrees button clicked subscription:", error)
+ 				},
+-				onComplete: () => {
+-					console.log("Worktrees button clicked subscription completed")
+-				},
++				onComplete: () => {},
+ 			},
+ 		)
+ 
+@@ -531,23 +513,18 @@ export const ExtensionStateContextProvider: React.FC<{
+ 			onError: (error) => {
+ 				console.error("Error in partialMessage subscription:", error)
+ 			},
+-			onComplete: () => {
+-				console.log("[DEBUG] partialMessage subscription completed")
+-			},
++			onComplete: () => {},
+ 		})
+ 
+ 		// Subscribe to MCP marketplace catalog updates
+ 		mcpMarketplaceUnsubscribeRef.current = McpServiceClient.subscribeToMcpMarketplaceCatalog(EmptyRequest.create({}), {
+ 			onResponse: (catalog) => {
+-				console.log("[DEBUG] Received MCP marketplace catalog update from gRPC stream")
+ 				setMcpMarketplaceCatalog(catalog)
+ 			},
+ 			onError: (error) => {
+ 				console.error("Error in MCP marketplace catalog subscription:", error)
+ 			},
+-			onComplete: () => {
+-				console.log("MCP marketplace catalog subscription completed")
+-			},
++			onComplete: () => {},
+ 		})
+ 
+ 		// Subscribe to OpenRouter models updates
+@@ -562,9 +539,7 @@ export const ExtensionStateContextProvider: React.FC<{
+ 			onError: (error) => {
+ 				console.error("Error in OpenRouter models subscription:", error)
+ 			},
+-			onComplete: () => {
+-				console.log("OpenRouter models subscription completed")
+-			},
++			onComplete: () => {},
+ 		})
+ 
+ 		// Subscribe to LiteLLM models updates
+@@ -576,16 +551,12 @@ export const ExtensionStateContextProvider: React.FC<{
+ 			onError: (error) => {
+ 				console.error("Error in LiteLLM models subscription:", error)
+ 			},
+-			onComplete: () => {
+-				console.log("LiteLLM models subscription completed")
+-			},
++			onComplete: () => {},
+ 		})
+ 
+ 		// Initialize webview using gRPC
+ 		UiServiceClient.initializeWebview(EmptyRequest.create({}))
+-			.then(() => {
+-				console.log("[DEBUG] Webview initialization completed via gRPC")
+-			})
++			.then(() => {})
+ 			.catch((error) => {
+ 				console.error("Failed to initialize webview via gRPC:", error)
+ 			})
+@@ -593,16 +564,12 @@ export const ExtensionStateContextProvider: React.FC<{
+ 		// Set up account button clicked subscription
+ 		accountButtonClickedSubscriptionRef.current = UiServiceClient.subscribeToAccountButtonClicked(EmptyRequest.create(), {
+ 			onResponse: () => {
+-				// When account button is clicked, navigate to account view
+-				console.log("[DEBUG] Received account button clicked event from gRPC stream")
+ 				navigateToAccount()
+ 			},
+ 			onError: (error) => {
+ 				console.error("Error in account button clicked subscription:", error)
+ 			},
+-			onComplete: () => {
+-				console.log("Account button clicked subscription completed")
+-			},
++			onComplete: () => {},
+ 		})
+ 
+ 		// Fetch available terminal profiles on launch
+diff --git a/webview-ui/vite.config.ts b/webview-ui/vite.config.ts
+index 52ea60a6d..2a8c62e78 100644
+--- a/webview-ui/vite.config.ts
++++ b/webview-ui/vite.config.ts
+@@ -4,7 +4,7 @@ import { writeFileSync } from "node:fs"
+ import tailwindcss from "@tailwindcss/vite"
+ import react from "@vitejs/plugin-react-swc"
+ import { resolve } from "path"
+-import { defineConfig, type Plugin, ViteDevServer } from "vite"
++import { defineConfig, type Plugin, type ViteDevServer } from "vite"
+ 
+ // Custom plugin to write the server port to a file
+ const writePortToFile = (): Plugin => {
+@@ -38,6 +38,7 @@ if (!VALID_PLATFORMS.includes(platform)) {
+ console.log("Building webview for", platform)
+ 
+ export default defineConfig({
++	// Resonance: use relative paths for assets so codicon.ttf resolves in VS Code webview
+ 	base: "./",
+ 	optimizeDeps: {
+ 		force: true, // Forces re-optimization
+-- 
+2.50.1
+

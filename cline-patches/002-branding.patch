@@ -1,0 +1,2792 @@
+From 218d565e112580c904e3a2347ad8ecb36b00e05f Mon Sep 17 00:00:00 2001
+From: jmat <jens.mattke@raab.de>
+Date: Sun, 12 Apr 2026 14:21:05 +0200
+Subject: [PATCH 2/6] =?UTF-8?q?002-branding:=20Cline=20=E2=86=92=20Resonan?=
+ =?UTF-8?q?ce=20across=20all=20user-facing=20strings?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Package.json metadata (displayName, publisher, description)
+- Walkthrough content rewritten for Resonance
+- All chat UI, settings, welcome, onboarding strings
+- Tool notification messages (15 handlers)
+- Terminal labels, review controller, error messages
+- Empty BANNER_DATA (no Cline promos)
+- CLI agent branding
+---
+ cli/src/agent/ClineAgent.ts                   |  11 +-
+ package-lock.json                             | 114 ++++---------
+ package.json                                  | 160 ++++++++----------
+ src/common.ts                                 |   6 +-
+ src/core/prompts/contextManagement.ts         |   2 +-
+ src/core/task/index.ts                        |  49 +++---
+ .../handlers/AccessMcpResourceHandler.ts      |  25 ++-
+ .../task/tools/handlers/ApplyPatchHandler.ts  |   2 +-
+ .../AskFollowupQuestionToolHandler.ts         |   8 +-
+ .../task/tools/handlers/BrowserToolHandler.ts |  13 +-
+ .../task/tools/handlers/CondenseHandler.ts    |  45 +++--
+ .../handlers/ExecuteCommandToolHandler.ts     |   2 +-
+ .../ListCodeDefinitionNamesToolHandler.ts     |   2 +-
+ .../tools/handlers/ListFilesToolHandler.ts    |   2 +-
+ .../task/tools/handlers/NewTaskHandler.ts     |   9 +-
+ .../tools/handlers/ReadFileToolHandler.ts     |   4 +-
+ .../task/tools/handlers/ReportBugHandler.ts   |  49 +++---
+ .../tools/handlers/SearchFilesToolHandler.ts  |   4 +-
+ .../task/tools/handlers/UseMcpToolHandler.ts  |  30 ++--
+ .../tools/handlers/WebFetchToolHandler.ts     |  31 ++--
+ .../tools/handlers/WebSearchToolHandler.ts    |  31 ++--
+ .../tools/handlers/WriteToFileToolHandler.ts  |   2 +-
+ .../workspace/executeCommandInTerminal.ts     |   5 +-
+ .../review/VscodeCommentReviewController.ts   |   6 +-
+ .../vscode/terminal/VscodeTerminalRegistry.ts |   3 +-
+ .../standalone/StandaloneTerminalManager.ts   |   2 +-
+ src/registry.ts                               |   2 +-
+ src/shared/ExtensionMessage.ts                |  33 ++--
+ src/shared/cline/banner.ts                    |  80 +--------
+ walkthrough/step1.md                          |   8 +-
+ walkthrough/step2.md                          |  13 +-
+ walkthrough/step3.md                          |  12 +-
+ walkthrough/step4.md                          |  13 +-
+ walkthrough/step5.md                          |  13 +-
+ .../src/components/chat/BrowserSessionRow.tsx |  17 +-
+ webview-ui/src/components/chat/ChatRow.tsx    |  72 ++++----
+ webview-ui/src/components/chat/ErrorRow.tsx   |  22 ++-
+ .../components/messages/ToolGroupRenderer.tsx |   4 +-
+ .../chat-view/hooks/useMessageHandlers.ts     |   1 -
+ .../src/components/common/TelemetryBanner.tsx |   6 +-
+ .../src/components/common/WhatsNewModal.tsx   | 133 ++-------------
+ .../src/components/onboarding/data-steps.ts   |   6 +-
+ .../settings/ClineAccountInfoCard.tsx         |   4 +-
+ .../src/components/settings/SettingsView.tsx  |   2 +-
+ .../settings/sections/AboutSection.tsx        |  37 +---
+ .../sections/GeneralSettingsSection.tsx       |   4 +-
+ .../src/components/welcome/HomeHeader.tsx     |  42 +----
+ .../src/components/welcome/SuggestedTasks.tsx |   6 +-
+ .../src/components/welcome/WelcomeView.tsx    |  17 +-
+ 49 files changed, 437 insertions(+), 727 deletions(-)
+
+diff --git a/cli/src/agent/ClineAgent.ts b/cli/src/agent/ClineAgent.ts
+index f898fda03..4d89a81ba 100644
+--- a/cli/src/agent/ClineAgent.ts
++++ b/cli/src/agent/ClineAgent.ts
+@@ -37,7 +37,7 @@ import {
+ 	xaiModels,
+ } from "@shared/api"
+ import type { ClineAsk, ClineMessage as ClineMessageType } from "@shared/ExtensionMessage"
+-import { CLI_ONLY_COMMANDS, VSCODE_ONLY_COMMANDS } from "@shared/slashCommands"
++import { CLI_ONLY_COMMANDS } from "@shared/slashCommands"
+ import { getProviderModelIdKey } from "@shared/storage/provider-keys"
+ import { ClineEndpoint } from "@/config.js"
+ import { Controller } from "@/core/controller"
+@@ -61,7 +61,7 @@ import { ACPHostBridgeClientProvider } from "../acp/ACPHostBridgeClientProvider.
+ import { AcpTerminalManager } from "../acp/AcpTerminalManager.js"
+ import { isAuthConfigured } from "../utils/auth"
+ import { fetchOpenRouterModels, usesOpenRouterModels } from "../utils/openrouter-models"
+-import { CliContextResult, initializeCliContext } from "../vscode-context.js"
++import { type CliContextResult, initializeCliContext } from "../vscode-context.js"
+ import { ClineSessionEmitter } from "./ClineSessionEmitter.js"
+ import { translateMessage } from "./messageTranslator.js"
+ import { handlePermissionResponse } from "./permissionHandler.js"
+@@ -1130,13 +1130,10 @@ export class ClineAgent implements acp.Agent {
+ 			// Get all available commands from Cline
+ 			const response = await getAvailableSlashCommands(controller, {})
+ 
+-			// Filter out CLI-only and VS Code-only commands
++			// Filter out CLI-only commands
+ 			const cliOnlyNames = new Set(CLI_ONLY_COMMANDS.map((c) => c.name))
+-			const vscodeOnlyNames = new Set(VSCODE_ONLY_COMMANDS.map((c) => c.name))
+ 
+-			const filteredCommands = response.commands.filter(
+-				(cmd) => cmd.cliCompatible && !cliOnlyNames.has(cmd.name) && !vscodeOnlyNames.has(cmd.name),
+-			)
++			const filteredCommands = response.commands.filter((cmd) => cmd.cliCompatible && !cliOnlyNames.has(cmd.name))
+ 
+ 			// Convert to ACP AvailableCommand format
+ 			const availableCommands: acp.AvailableCommand[] = filteredCommands.map((cmd) => ({
+diff --git a/package-lock.json b/package-lock.json
+index be062f947..07fd78e70 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,11 +1,11 @@
+ {
+-	"name": "claude-dev",
++	"name": "resonance",
+ 	"version": "3.78.0",
+ 	"lockfileVersion": 3,
+ 	"requires": true,
+ 	"packages": {
+ 		"": {
+-			"name": "claude-dev",
++			"name": "resonance",
+ 			"version": "3.78.0",
+ 			"license": "Apache-2.0",
+ 			"workspaces": [
+@@ -5596,8 +5596,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"android"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-android-arm64": {
+ 			"version": "4.60.0",
+@@ -5610,8 +5609,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"android"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-darwin-arm64": {
+ 			"version": "4.60.0",
+@@ -5624,8 +5622,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"darwin"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-darwin-x64": {
+ 			"version": "4.60.0",
+@@ -5638,8 +5635,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"darwin"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-freebsd-arm64": {
+ 			"version": "4.60.0",
+@@ -5652,8 +5648,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"freebsd"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-freebsd-x64": {
+ 			"version": "4.60.0",
+@@ -5666,8 +5661,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"freebsd"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-arm-gnueabihf": {
+ 			"version": "4.60.0",
+@@ -5680,8 +5674,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-arm-musleabihf": {
+ 			"version": "4.60.0",
+@@ -5694,8 +5687,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-arm64-gnu": {
+ 			"version": "4.60.0",
+@@ -5708,8 +5700,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-arm64-musl": {
+ 			"version": "4.60.0",
+@@ -5722,8 +5713,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-loong64-gnu": {
+ 			"version": "4.60.0",
+@@ -5736,8 +5726,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-loong64-musl": {
+ 			"version": "4.60.0",
+@@ -5750,8 +5739,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-ppc64-gnu": {
+ 			"version": "4.60.0",
+@@ -5764,8 +5752,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-ppc64-musl": {
+ 			"version": "4.60.0",
+@@ -5778,8 +5765,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-riscv64-gnu": {
+ 			"version": "4.60.0",
+@@ -5792,8 +5778,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-riscv64-musl": {
+ 			"version": "4.60.0",
+@@ -5806,8 +5791,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-s390x-gnu": {
+ 			"version": "4.60.0",
+@@ -5820,8 +5804,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-x64-gnu": {
+ 			"version": "4.60.0",
+@@ -5834,8 +5817,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-linux-x64-musl": {
+ 			"version": "4.60.0",
+@@ -5848,8 +5830,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"linux"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-openbsd-x64": {
+ 			"version": "4.60.0",
+@@ -5862,8 +5843,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"openbsd"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-openharmony-arm64": {
+ 			"version": "4.60.0",
+@@ -5876,8 +5856,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"openharmony"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-win32-arm64-msvc": {
+ 			"version": "4.60.0",
+@@ -5890,8 +5869,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"win32"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-win32-ia32-msvc": {
+ 			"version": "4.60.0",
+@@ -5904,8 +5882,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"win32"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-win32-x64-gnu": {
+ 			"version": "4.60.0",
+@@ -5918,8 +5895,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"win32"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@rollup/rollup-win32-x64-msvc": {
+ 			"version": "4.60.0",
+@@ -5932,8 +5908,7 @@
+ 			"optional": true,
+ 			"os": [
+ 				"win32"
+-			],
+-			"peer": true
++			]
+ 		},
+ 		"node_modules/@sap-ai-sdk/ai-api": {
+ 			"version": "2.7.0",
+@@ -10262,10 +10237,6 @@
+ 			"integrity": "sha512-9z8TZaGM1pfswYeXrUpzPrkx8UnWYdhJclsiYMm6x/w5+nN+8Tf/LnAgfLGQCm59qAOxU8WwHEq2vNwF6i4j+Q==",
+ 			"license": "MIT"
+ 		},
+-		"node_modules/claude-dev": {
+-			"resolved": "",
+-			"link": true
+-		},
+ 		"node_modules/clean-stack": {
+ 			"version": "2.2.0",
+ 			"resolved": "https://registry.npmjs.org/clean-stack/-/clean-stack-2.2.0.tgz",
+@@ -19425,6 +19396,10 @@
+ 				"node": ">=8"
+ 			}
+ 		},
++		"node_modules/resonance": {
++			"resolved": "",
++			"link": true
++		},
+ 		"node_modules/restore-cursor": {
+ 			"version": "5.1.0",
+ 			"resolved": "https://registry.npmjs.org/restore-cursor/-/restore-cursor-5.1.0.tgz",
+@@ -22222,7 +22197,6 @@
+ 			"os": [
+ 				"aix"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22239,7 +22213,6 @@
+ 			"os": [
+ 				"android"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22256,7 +22229,6 @@
+ 			"os": [
+ 				"android"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22273,7 +22245,6 @@
+ 			"os": [
+ 				"android"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22290,7 +22261,6 @@
+ 			"os": [
+ 				"darwin"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22307,7 +22277,6 @@
+ 			"os": [
+ 				"darwin"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22324,7 +22293,6 @@
+ 			"os": [
+ 				"freebsd"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22341,7 +22309,6 @@
+ 			"os": [
+ 				"freebsd"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22358,7 +22325,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22375,7 +22341,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22392,7 +22357,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22409,7 +22373,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22426,7 +22389,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22443,7 +22405,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22460,7 +22421,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22477,7 +22437,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22494,7 +22453,6 @@
+ 			"os": [
+ 				"linux"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22511,7 +22469,6 @@
+ 			"os": [
+ 				"netbsd"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22528,7 +22485,6 @@
+ 			"os": [
+ 				"netbsd"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22545,7 +22501,6 @@
+ 			"os": [
+ 				"openbsd"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22562,7 +22517,6 @@
+ 			"os": [
+ 				"openbsd"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22579,7 +22533,6 @@
+ 			"os": [
+ 				"openharmony"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22596,7 +22549,6 @@
+ 			"os": [
+ 				"sunos"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22613,7 +22565,6 @@
+ 			"os": [
+ 				"win32"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22630,7 +22581,6 @@
+ 			"os": [
+ 				"win32"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22647,7 +22597,6 @@
+ 			"os": [
+ 				"win32"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": ">=18"
+ 			}
+@@ -22703,7 +22652,6 @@
+ 			"os": [
+ 				"darwin"
+ 			],
+-			"peer": true,
+ 			"engines": {
+ 				"node": "^8.16.0 || ^10.6.0 || >=11.0.0"
+ 			}
+diff --git a/package.json b/package.json
+index 9e695724b..a562d75cd 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+-	"name": "claude-dev",
+-	"displayName": "Cline",
+-	"description": "Autonomous coding agent right in your IDE, capable of creating/editing files, running commands, using the browser, and more with your permission every step of the way.",
++	"name": "resonance",
++	"displayName": "Resonance",
++	"description": "Your project management assistant with persistent memory. Maintains state across sessions, organizes work packages, and helps with knowledge management.",
+ 	"version": "3.78.0",
+ 	"icon": "assets/icons/icon.png",
+ 	"workspaces": [
+@@ -12,15 +12,15 @@
+ 		"vscode": "^1.84.0"
+ 	},
+ 	"author": {
+-		"name": "Cline Bot Inc."
++		"name": "Resonance Team"
+ 	},
+ 	"license": "Apache-2.0",
+-	"publisher": "saoudrizwan",
++	"publisher": "resonance-team",
+ 	"repository": {
+ 		"type": "git",
+-		"url": "https://github.com/cline/cline"
++		"url": "https://github.com/resonance/resonance"
+ 	},
+-	"homepage": "https://cline.bot",
++	"homepage": "https://resonance.app",
+ 	"categories": [
+ 		"AI",
+ 		"Chat",
+@@ -30,18 +30,18 @@
+ 		"Testing"
+ 	],
+ 	"keywords": [
+-		"cline",
+-		"claude",
+-		"dev",
++		"resonance",
++		"project-management",
++		"state-machine",
++		"memory",
+ 		"mcp",
+-		"openrouter",
+-		"coding",
+-		"agent",
+-		"autonomous",
+-		"chatgpt",
+-		"sonnet",
++		"work-packages",
++		"knowledge-management",
++		"ai-assistant",
++		"persistent-memory",
++		"task-management",
+ 		"ai",
+-		"llama"
++		"assistant"
+ 	],
+ 	"activationEvents": [
+ 		"onLanguage",
+@@ -51,57 +51,48 @@
+ 	],
+ 	"main": "./dist/extension.js",
+ 	"contributes": {
+-		"icons": {
+-			"cline-icon": {
+-				"description": "cline",
+-				"default": {
+-					"fontPath": "assets/icons/cline-bot.woff",
+-					"fontCharacter": "\\e900"
+-				}
+-			}
+-		},
+ 		"walkthroughs": [
+ 			{
+-				"id": "ClineWalkthrough",
+-				"title": "Meet Cline, your new coding partner",
+-				"description": "Cline codes like a developer because it thinks like one. Here are 5 ways to put it to work:",
++				"id": "ResonanceWalkthrough",
++				"title": "Meet Resonance, your project management assistant",
++				"description": "Resonance maintains state across sessions using persistent memory. Here are 5 key concepts:",
+ 				"steps": [
+ 					{
+ 						"id": "welcome",
+-						"title": "Start with a Goal, Not Just a Prompt",
+-						"description": "Tell Cline what you want to achieve. It plans, asks, and then codes, like a true partner.",
++						"title": "You're a State Machine, Not a Chatbot",
++						"description": "Resonance maintains persistent memory in .resonance/ directory across all sessions.",
+ 						"media": {
+ 							"markdown": "walkthrough/step1.md"
+ 						}
+ 					},
+ 					{
+-						"id": "learn",
+-						"title": "Let Cline Learn Your Codebase",
+-						"description": "Point Cline to your project. It builds understanding to make smart, context-aware changes.",
++						"id": "memory",
++						"title": "Persistent Memory System",
++						"description": "Every session reads 01_state.md to understand current work package, goals, and next steps.",
+ 						"media": {
+ 							"markdown": "walkthrough/step2.md"
+ 						}
+ 					},
+ 					{
+-						"id": "advanced-features",
+-						"title": "Always Use the Best AI Models",
+-						"description": "Cline empowers you with State-of-the-Art AI, connecting to top models (Anthropic, Gemini, OpenAI & more).",
++						"id": "synch-rule",
++						"title": "The Synch Rule: Micro vs Macro",
++						"description": "Micro-tasks stay in chat. Only update 01_state.md when reaching milestones.",
+ 						"media": {
+ 							"markdown": "walkthrough/step3.md"
+ 						}
+ 					},
+ 					{
+-						"id": "mcp",
+-						"title": "Extend with Powerful Tools (MCP)",
+-						"description": "Connect to databases, APIs, or discover new capabilities in the MCP Marketplace.",
++						"id": "knowledge",
++						"title": "Knowledge Management",
++						"description": "Use docs/ for permanent documentation, 03_backlog.md for quick TODOs.",
+ 						"media": {
+ 							"markdown": "walkthrough/step4.md"
+ 						}
+ 					},
+ 					{
+-						"id": "getting-started",
++						"id": "control",
+ 						"title": "You're Always in Control",
+-						"description": "Review Cline's plans and diffs. Approve changes before they happen. No surprises.",
++						"description": "Review plans and changes. Bring your own API keys. Full transparency.",
+ 						"media": {
+ 							"markdown": "walkthrough/step5.md"
+ 						},
+@@ -113,19 +104,19 @@
+ 			}
+ 		],
+ 		"viewsContainers": {
+-			"activitybar": [
++			"secondarySidebar": [
+ 				{
+-					"id": "claude-dev-ActivityBar",
+-					"title": "Cline",
++					"id": "resonance-ActivityBar",
++					"title": "Resonance",
+ 					"icon": "assets/icons/icon.svg"
+ 				}
+ 			]
+ 		},
+ 		"views": {
+-			"claude-dev-ActivityBar": [
++			"resonance-ActivityBar": [
+ 				{
+ 					"type": "webview",
+-					"id": "claude-dev.SidebarProvider",
++					"id": "resonance.SidebarProvider",
+ 					"name": "",
+ 					"icon": "assets/icons/icon.svg"
+ 				}
+@@ -160,90 +151,89 @@
+ 			{
+ 				"command": "cline.dev.createTestTasks",
+ 				"title": "Create Test Tasks",
+-				"category": "Cline",
++				"category": "Resonance",
+ 				"when": "cline.isDevMode"
+ 			},
+ 			{
+ 				"command": "cline.dev.expireMcpOAuthTokens",
+ 				"title": "Expire MCP OAuth Tokens (for testing)",
+-				"category": "Cline",
++				"category": "Resonance",
+ 				"when": "cline.isDevMode"
+ 			},
+ 			{
+ 				"command": "cline.addToChat",
+-				"title": "Add to Cline",
+-				"category": "Cline"
++				"title": "Add to Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.addTerminalOutputToChat",
+-				"title": "Add to Cline",
+-				"category": "Cline"
++				"title": "Add to Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.focusChatInput",
+ 				"title": "Jump to Chat Input",
+-				"category": "Cline"
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.generateGitCommitMessage",
+-				"title": "Generate Commit Message with Cline",
+-				"category": "Cline",
+-				"icon": "$(cline-icon)"
++				"title": "Generate Commit Message with Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.abortGitCommitMessage",
+-				"title": "Generate Commit Message with Cline - Stop",
+-				"category": "Cline",
++				"title": "Generate Commit Message with Resonance - Stop",
++				"category": "Resonance",
+ 				"icon": "$(debug-stop)"
+ 			},
+ 			{
+ 				"command": "cline.explainCode",
+-				"title": "Explain with Cline",
+-				"category": "Cline"
++				"title": "Explain with Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.improveCode",
+-				"title": "Improve with Cline",
+-				"category": "Cline"
++				"title": "Improve with Resonance",
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.jupyterGenerateCell",
+-				"title": "Generate Jupyter Cell with Cline",
+-				"category": "Cline",
++				"title": "Generate Jupyter Cell with Resonance",
++				"category": "Resonance",
+ 				"icon": "$(sparkle)"
+ 			},
+ 			{
+ 				"command": "cline.jupyterExplainCell",
+-				"title": "Explain Jupyter Cell with Cline",
+-				"category": "Cline",
++				"title": "Explain Jupyter Cell with Resonance",
++				"category": "Resonance",
+ 				"icon": "$(question)"
+ 			},
+ 			{
+ 				"command": "cline.jupyterImproveCell",
+-				"title": "Improve Jupyter Cell with Cline",
+-				"category": "Cline",
++				"title": "Improve Jupyter Cell with Resonance",
++				"category": "Resonance",
+ 				"icon": "$(lightbulb)"
+ 			},
+ 			{
+ 				"command": "cline.openWalkthrough",
+ 				"title": "Open Walkthrough",
+-				"category": "Cline"
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.reconstructTaskHistory",
+ 				"title": "Reconstruct Task History",
+-				"category": "Cline"
++				"category": "Resonance"
+ 			},
+ 			{
+ 				"command": "cline.reviewComment.reply",
+ 				"title": "Reply",
+-				"category": "Cline",
++				"category": "Resonance",
+ 				"enablement": "!commentIsEmpty"
+ 			},
+ 			{
+ 				"command": "cline.reviewComment.addToChat",
+-				"title": "Add to Cline Chat",
+-				"category": "Cline",
++				"title": "Add to Resonance Chat",
++				"category": "Resonance",
+ 				"icon": "$(link-external)"
+ 			}
+ 		],
+@@ -279,27 +269,17 @@
+ 				{
+ 					"command": "cline.plusButtonClicked",
+ 					"group": "navigation@1",
+-					"when": "view == claude-dev.SidebarProvider"
+-				},
+-				{
+-					"command": "cline.mcpButtonClicked",
+-					"group": "navigation@2",
+-					"when": "view == claude-dev.SidebarProvider"
++					"when": "view == resonance.SidebarProvider"
+ 				},
+ 				{
+ 					"command": "cline.historyButtonClicked",
+-					"group": "navigation@3",
+-					"when": "view == claude-dev.SidebarProvider"
+-				},
+-				{
+-					"command": "cline.accountButtonClicked",
+-					"group": "navigation@5",
+-					"when": "view == claude-dev.SidebarProvider"
++					"group": "navigation@2",
++					"when": "view == resonance.SidebarProvider"
+ 				},
+ 				{
+ 					"command": "cline.settingsButtonClicked",
+-					"group": "navigation@6",
+-					"when": "view == claude-dev.SidebarProvider"
++					"group": "navigation@3",
++					"when": "view == resonance.SidebarProvider"
+ 				}
+ 			],
+ 			"editor/context": [
+@@ -376,7 +356,7 @@
+ 			]
+ 		},
+ 		"configuration": {
+-			"title": "Cline",
++			"title": "Resonance",
+ 			"properties": {}
+ 		}
+ 	},
+diff --git a/src/common.ts b/src/common.ts
+index 85426303f..8a1702dab 100644
+--- a/src/common.ts
++++ b/src/common.ts
+@@ -89,7 +89,7 @@ async function showVersionUpdateAnnouncement(stateManager: StateManager) {
+ 	// Perform post-update actions if necessary
+ 	try {
+ 		if (!previousVersion || currentVersion !== previousVersion) {
+-			Logger.log(`Cline version changed: ${previousVersion} -> ${currentVersion}. First run or update detected.`)
++			Logger.log(`Resonance version changed: ${previousVersion} -> ${currentVersion}. First run or update detected.`)
+ 
+ 			// Check if there's a new announcement to show
+ 			const lastShownAnnouncementId = stateManager.getGlobalStateKey("lastShownAnnouncementId")
+@@ -98,8 +98,8 @@ async function showVersionUpdateAnnouncement(stateManager: StateManager) {
+ 			if (lastShownAnnouncementId !== latestAnnouncementId) {
+ 				// Show notification when there's a new announcement (major/minor updates or fresh installs)
+ 				const message = previousVersion
+-					? `Cline has been updated to v${currentVersion}`
+-					: `Welcome to Cline v${currentVersion}`
++					? `Resonance has been updated to v${currentVersion}`
++					: `Welcome to Resonance v${currentVersion}`
+ 				HostProvider.window.showMessage({
+ 					type: ShowMessageType.INFORMATION,
+ 					message,
+diff --git a/src/core/prompts/contextManagement.ts b/src/core/prompts/contextManagement.ts
+index 0f0369f8a..06ff831da 100644
+--- a/src/core/prompts/contextManagement.ts
++++ b/src/core/prompts/contextManagement.ts
+@@ -114,5 +114,5 @@ This session is being continued from a previous conversation that ran out of con
+ ${summaryText}.
+ 
+ Please continue the conversation from where we left it off without asking the user any further questions. Continue with the last task that you were asked to work on. Pay special attention to the most recent user message when responding rather than the initial task message, if applicable.
+-If the most recent user's message starts with "/newtask", "/smol", "/compact", "/newrule", or "/reportbug", you should indicate to the user that they will need to run this command again.
++If the most recent user's message starts with "/setup", "/smol", "/compact", or "/demo", you should indicate to the user that they will need to run this command again.
+ `
+diff --git a/src/core/task/index.ts b/src/core/task/index.ts
+index 00e8e605b..7aef8f99e 100644
+--- a/src/core/task/index.ts
++++ b/src/core/task/index.ts
+@@ -1,7 +1,7 @@
+ import { setTimeout as setTimeoutPromise } from "node:timers/promises"
+-import { ApiHandler, ApiProviderInfo, buildApiHandler } from "@core/api"
+-import { ApiStream } from "@core/api/transform/stream"
+-import { AssistantMessageContent, parseAssistantMessageV2, ToolUse } from "@core/assistant-message"
++import { type ApiHandler, type ApiProviderInfo, buildApiHandler } from "@core/api"
++import type { ApiStream } from "@core/api/transform/stream"
++import { type AssistantMessageContent, parseAssistantMessageV2, type ToolUse } from "@core/assistant-message"
+ import { ContextManager } from "@core/context/context-management/ContextManager"
+ import { checkContextWindowExceededError } from "@core/context/context-management/context-error-handling"
+ import { getContextWindowInfo } from "@core/context/context-management/context-window-utils"
+@@ -23,7 +23,7 @@ import { sendPartialMessageEvent } from "@core/controller/ui/subscribeToPartialM
+ import { getHookModelContext } from "@core/hooks/hook-model-context"
+ import { getHooksEnabledSafe } from "@core/hooks/hooks-utils"
+ import * as NotificationHook from "@core/hooks/notification-hook"
+-import { executePreCompactHookWithCleanup, HookCancellationError, HookExecution } from "@core/hooks/precompact-executor"
++import { executePreCompactHookWithCleanup, HookCancellationError, type HookExecution } from "@core/hooks/precompact-executor"
+ import { ClineIgnoreController } from "@core/ignore/ClineIgnoreController"
+ import { parseMentions } from "@core/mentions"
+ import { CommandPermissionController } from "@core/permissions"
+@@ -39,31 +39,31 @@ import {
+ } from "@core/storage/disk"
+ import { releaseTaskLock } from "@core/task/TaskLockUtils"
+ import { isMultiRootEnabled } from "@core/workspace/multi-root-utils"
+-import { WorkspaceRootManager } from "@core/workspace/WorkspaceRootManager"
++import type { WorkspaceRootManager } from "@core/workspace/WorkspaceRootManager"
+ import { buildCheckpointManager, shouldUseMultiRoot } from "@integrations/checkpoints/factory"
+ import { ensureCheckpointInitialized } from "@integrations/checkpoints/initializer"
+-import { ICheckpointManager } from "@integrations/checkpoints/types"
+-import { DiffViewProvider } from "@integrations/editor/DiffViewProvider"
++import type { ICheckpointManager } from "@integrations/checkpoints/types"
++import type { DiffViewProvider } from "@integrations/editor/DiffViewProvider"
+ import { formatContentBlockToMarkdown } from "@integrations/misc/export-markdown"
+ import { processFilesIntoText } from "@integrations/misc/extract-text"
+ import { showSystemNotification } from "@integrations/notifications"
+-import { ITerminalManager } from "@integrations/terminal/types"
++import type { ITerminalManager } from "@integrations/terminal/types"
+ import { BrowserSession } from "@services/browser/BrowserSession"
+ import { UrlContentFetcher } from "@services/browser/UrlContentFetcher"
+ import { featureFlagsService } from "@services/feature-flags"
+ import { listFiles } from "@services/glob/list-files"
+-import { McpHub } from "@services/mcp/McpHub"
+-import { ApiConfiguration } from "@shared/api"
++import type { McpHub } from "@services/mcp/McpHub"
++import type { ApiConfiguration } from "@shared/api"
+ import { findLast, findLastIndex } from "@shared/array"
+ import { combineApiRequests } from "@shared/combineApiRequests"
+ import { combineCommandSequences } from "@shared/combineCommandSequences"
+-import { ClineApiReqCancelReason, ClineApiReqInfo, ClineAsk, ClineMessage, ClineSay } from "@shared/ExtensionMessage"
+-import { HistoryItem } from "@shared/HistoryItem"
+-import { DEFAULT_LANGUAGE_SETTINGS, getLanguageKey, LanguageDisplay } from "@shared/Languages"
++import type { ClineApiReqCancelReason, ClineApiReqInfo, ClineAsk, ClineMessage, ClineSay } from "@shared/ExtensionMessage"
++import type { HistoryItem } from "@shared/HistoryItem"
++import { DEFAULT_LANGUAGE_SETTINGS, getLanguageKey, type LanguageDisplay } from "@shared/Languages"
+ import { USER_CONTENT_TAGS } from "@shared/messages/constants"
+ import { convertClineMessageToProto } from "@shared/proto-conversions/cline-message"
+-import { ClineDefaultTool, READ_ONLY_TOOLS } from "@shared/tools"
+-import { ClineAskResponse } from "@shared/WebviewMessage"
++import { type ClineDefaultTool, READ_ONLY_TOOLS } from "@shared/tools"
++import type { ClineAskResponse } from "@shared/WebviewMessage"
+ import {
+ 	isClaude4PlusModelFamily,
+ 	isGPT5ModelFamily,
+@@ -86,14 +86,14 @@ import { FileEditProvider } from "@/integrations/editor/FileEditProvider"
+ import {
+ 	type CommandExecutionOptions,
+ 	CommandExecutor,
+-	CommandExecutorCallbacks,
+-	FullCommandExecutorConfig,
++	type CommandExecutorCallbacks,
++	type FullCommandExecutorConfig,
+ 	StandaloneTerminalManager,
+ } from "@/integrations/terminal"
+ import { ClineError, ClineErrorType, ErrorService } from "@/services/error"
+ import { telemetryService } from "@/services/telemetry"
+ import { ClineClient } from "@/shared/cline"
+-import {
++import type {
+ 	ClineAssistantContent,
+ 	ClineContent,
+ 	ClineImageContentBlock,
+@@ -111,9 +111,9 @@ import { RuleContextBuilder } from "../context/instructions/user-instructions/Ru
+ import { ensureLocalClineDirExists } from "../context/instructions/user-instructions/rule-helpers"
+ import { discoverSkills, getAvailableSkills } from "../context/instructions/user-instructions/skills"
+ import { refreshWorkflowToggles } from "../context/instructions/user-instructions/workflows"
+-import { Controller } from "../controller"
++import type { Controller } from "../controller"
+ import { executeHook } from "../hooks/hook-executor"
+-import { StateManager } from "../storage/StateManager"
++import type { StateManager } from "../storage/StateManager"
+ import { FocusChainManager } from "./focus-chain"
+ import {
+ 	getPresentationCadenceMs,
+@@ -926,7 +926,7 @@ export class Task {
+ 	async sayAndCreateMissingParamError(toolName: ClineDefaultTool, paramName: string, relPath?: string) {
+ 		await this.say(
+ 			"error",
+-			`Cline tried to use ${toolName}${
++			`Resonance tried to use ${toolName}${
+ 				relPath ? ` for '${relPath.toPosix()}'` : ""
+ 			} without value for required parameter '${paramName}'. Retrying...`,
+ 		)
+@@ -1916,7 +1916,6 @@ export class Task {
+ 			cursorLocalToggles,
+ 		)
+ 		const localWindsurfRulesFileInstructions = await getLocalWindsurfRules(this.cwd, windsurfLocalToggles)
+-
+ 		const localAgentsRulesFileInstructions = await getLocalAgentsRules(this.cwd, agentsLocalToggles)
+ 
+ 		const clineIgnoreContent = this.clineIgnoreController.clineIgnoreContent
+@@ -2392,14 +2391,14 @@ export class Task {
+ 			if (autoApprovalSettings.enableNotifications) {
+ 				showSystemNotification({
+ 					subtitle: "Error",
+-					message: "Cline is having trouble. Would you like to continue the task?",
++					message: "Resonance is having trouble. Would you like to continue the task?",
+ 				})
+ 			}
+ 			const { response, text, images, files } = await this.ask(
+ 				"mistake_limit_reached",
+ 				this.api.getModel().id.includes("claude")
+-					? `This may indicate a failure in Cline's thought process or inability to use a tool properly, which can be mitigated with some user guidance (e.g. "Try breaking down the task into smaller steps").`
+-					: "Cline uses complex prompts and iterative task execution that may be challenging for less capable models. For best results, it's recommended to use Claude 4.5 Sonnet for its advanced agentic coding capabilities.",
++					? `This may indicate a failure in Resonance's thought process or inability to use a tool properly, which can be mitigated with some user guidance (e.g. "Try breaking down the task into smaller steps").`
++					: "Resonance uses complex prompts and iterative task execution that may be challenging for less capable models. For best results, it's recommended to use Claude 4.6 Sonnet for its advanced agentic coding capabilities.",
+ 			)
+ 			if (response === "messageResponse") {
+ 				// Display the user's message in the chat UI
+diff --git a/src/core/task/tools/handlers/AccessMcpResourceHandler.ts b/src/core/task/tools/handlers/AccessMcpResourceHandler.ts
+index 9cb779508..9db634cbd 100644
+--- a/src/core/task/tools/handlers/AccessMcpResourceHandler.ts
++++ b/src/core/task/tools/handlers/AccessMcpResourceHandler.ts
+@@ -1,6 +1,6 @@
+ import type { ToolUse } from "@core/assistant-message"
+ import { formatResponse } from "@core/prompts/responses"
+-import { ClineAsk, ClineAskUseMcpServer } from "@shared/ExtensionMessage"
++import type { ClineAsk, ClineAskUseMcpServer } from "@shared/ExtensionMessage"
+ import { telemetryService } from "@/services/telemetry"
+ import { truncateContent } from "@/shared/content-limits"
+ import { ClineDefaultTool } from "@/shared/tools"
+@@ -93,7 +93,7 @@ export class AccessMcpResourceHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to access ${uri || "unknown resource"} on ${server_name || "unknown server"}`
++			const notificationMessage = `Resonance wants to access ${uri || "unknown resource"} on ${server_name || "unknown server"}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+@@ -113,18 +113,17 @@ export class AccessMcpResourceHandler implements IFullyManagedTool {
+ 					block.isNativeToolCall,
+ 				)
+ 				return formatResponse.toolDenied()
+-			} else {
+-				telemetryService.captureToolUsage(
+-					config.ulid,
+-					block.name,
+-					config.api.getModel().id,
+-					provider,
+-					false,
+-					true,
+-					undefined,
+-					block.isNativeToolCall,
+-				)
+ 			}
++			telemetryService.captureToolUsage(
++				config.ulid,
++				block.name,
++				config.api.getModel().id,
++				provider,
++				false,
++				true,
++				undefined,
++				block.isNativeToolCall,
++			)
+ 		}
+ 
+ 		// Run PreToolUse hook after approval but before execution
+diff --git a/src/core/task/tools/handlers/ApplyPatchHandler.ts b/src/core/task/tools/handlers/ApplyPatchHandler.ts
+index 5f0008c5e..4cc9527c7 100644
+--- a/src/core/task/tools/handlers/ApplyPatchHandler.ts
++++ b/src/core/task/tools/handlers/ApplyPatchHandler.ts
+@@ -764,7 +764,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
+ 			return true
+ 		}
+ 
+-		showNotificationForApproval(`Cline wants to edit '${message.path}'`, config.autoApprovalSettings.enableNotifications)
++		showNotificationForApproval(`Resonance wants to edit '${message.path}'`, config.autoApprovalSettings.enableNotifications)
+ 
+ 		await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
+ 		const { response, text, images, files } = await config.callbacks.ask("tool", completeMessage, false)
+diff --git a/src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts b/src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts
+index 4d82cdc09..77cc28e9f 100644
+--- a/src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts
++++ b/src/core/task/tools/handlers/AskFollowupQuestionToolHandler.ts
+@@ -1,12 +1,12 @@
+ import { processFilesIntoText } from "@integrations/misc/extract-text"
+ import { showSystemNotification } from "@integrations/notifications"
+ import { findLast, parsePartialArrayString } from "@shared/array"
+-import { ClineAsk, ClineAskQuestion } from "@shared/ExtensionMessage"
++import type { ClineAsk, ClineAskQuestion } from "@shared/ExtensionMessage"
+ import { ClineDefaultTool } from "@shared/tools"
+ import { telemetryService } from "@/services/telemetry"
+-import { ToolUse } from "../../../assistant-message"
++import type { ToolUse } from "../../../assistant-message"
+ import { formatResponse } from "../../../prompts/responses"
+-import { ToolResponse } from "../.."
++import type { ToolResponse } from "../.."
+ import type { IPartialBlockHandler, IToolHandler } from "../ToolExecutorCoordinator"
+ import type { TaskConfig } from "../types/TaskConfig"
+ import type { StronglyTypedUIHelpers } from "../types/UIHelpers"
+@@ -56,7 +56,7 @@ export class AskFollowupQuestionToolHandler implements IToolHandler, IPartialBlo
+ 		// Show notification if enabled
+ 		if (config.autoApprovalSettings.enableNotifications) {
+ 			showSystemNotification({
+-				subtitle: "Cline has a question...",
++				subtitle: "Resonance has a question...",
+ 				message: question.replace(/\n/g, " "),
+ 			})
+ 		}
+diff --git a/src/core/task/tools/handlers/BrowserToolHandler.ts b/src/core/task/tools/handlers/BrowserToolHandler.ts
+index 9571b2ba0..fccee2f71 100644
+--- a/src/core/task/tools/handlers/BrowserToolHandler.ts
++++ b/src/core/task/tools/handlers/BrowserToolHandler.ts
+@@ -1,8 +1,13 @@
+-import { BrowserAction, BrowserActionResult, browserActions, ClineSayBrowserAction } from "@shared/ExtensionMessage"
++import {
++	type BrowserAction,
++	type BrowserActionResult,
++	browserActions,
++	type ClineSayBrowserAction,
++} from "@shared/ExtensionMessage"
+ import { ClineDefaultTool } from "@/shared/tools"
+-import { ToolUse } from "../../../assistant-message"
++import type { ToolUse } from "../../../assistant-message"
+ import { formatResponse } from "../../../prompts/responses"
+-import { ToolResponse } from "../.."
++import type { ToolResponse } from "../.."
+ import { showNotificationForApproval } from "../../utils"
+ import type { IFullyManagedTool } from "../ToolExecutorCoordinator"
+ import type { TaskConfig } from "../types/TaskConfig"
+@@ -95,7 +100,7 @@ export class BrowserToolHandler implements IFullyManagedTool {
+ 				} else {
+ 					// Show notification for approval if enabled
+ 					showNotificationForApproval(
+-						`Cline wants to use a browser and launch ${url}`,
++						`Resonance wants to use a browser and launch ${url}`,
+ 						config.autoApprovalSettings.enableNotifications,
+ 					)
+ 					await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "browser_action_launch")
+diff --git a/src/core/task/tools/handlers/CondenseHandler.ts b/src/core/task/tools/handlers/CondenseHandler.ts
+index acfd77752..7e079ccb6 100644
+--- a/src/core/task/tools/handlers/CondenseHandler.ts
++++ b/src/core/task/tools/handlers/CondenseHandler.ts
+@@ -3,7 +3,7 @@ import { formatResponse } from "@core/prompts/responses"
+ import { ensureTaskDirectoryExists } from "@core/storage/disk"
+ import { processFilesIntoText } from "@integrations/misc/extract-text"
+ import { showSystemNotification } from "@integrations/notifications"
+-import { ClineAsk } from "@shared/ExtensionMessage"
++import type { ClineAsk } from "@shared/ExtensionMessage"
+ import { ClineDefaultTool } from "@/shared/tools"
+ import type { ToolResponse } from "../../index"
+ import type { IPartialBlockHandler, IToolHandler } from "../ToolExecutorCoordinator"
+@@ -33,8 +33,8 @@ export class CondenseHandler implements IToolHandler, IPartialBlockHandler {
+ 		// Show notification if enabled
+ 		if (config.autoApprovalSettings.enableNotifications) {
+ 			showSystemNotification({
+-				subtitle: "Cline wants to condense the conversation...",
+-				message: `Cline is suggesting to condense your conversation with: ${context}`,
++				subtitle: "Resonance wants to condense the conversation...",
++				message: `Resonance is suggesting to condense your conversation with: ${context}`,
+ 			})
+ 		}
+ 
+@@ -54,28 +54,27 @@ export class CondenseHandler implements IToolHandler, IPartialBlockHandler {
+ 				images,
+ 				fileContentString,
+ 			)
+-		} else {
+-			// If no response, the user accepted the condensed version
+-			const apiConversationHistory = config.messageState.getApiConversationHistory()
+-			const lastMessage = apiConversationHistory[apiConversationHistory.length - 1]
+-			const summaryAlreadyAppended = lastMessage && lastMessage.role === "assistant"
+-			const keepStrategy = summaryAlreadyAppended ? "lastTwo" : "none"
++		}
++		// If no response, the user accepted the condensed version
++		const apiConversationHistory = config.messageState.getApiConversationHistory()
++		const lastMessage = apiConversationHistory[apiConversationHistory.length - 1]
++		const summaryAlreadyAppended = lastMessage && lastMessage.role === "assistant"
++		const keepStrategy = summaryAlreadyAppended ? "lastTwo" : "none"
+ 
+-			// clear the context history at this point in time
+-			config.taskState.conversationHistoryDeletedRange = config.services.contextManager.getNextTruncationRange(
+-				apiConversationHistory,
+-				config.taskState.conversationHistoryDeletedRange,
+-				keepStrategy,
+-			)
+-			await config.messageState.saveClineMessagesAndUpdateHistory()
+-			await config.services.contextManager.triggerApplyStandardContextTruncationNoticeChange(
+-				Date.now(),
+-				await ensureTaskDirectoryExists(config.taskId),
+-				apiConversationHistory,
+-			)
++		// clear the context history at this point in time
++		config.taskState.conversationHistoryDeletedRange = config.services.contextManager.getNextTruncationRange(
++			apiConversationHistory,
++			config.taskState.conversationHistoryDeletedRange,
++			keepStrategy,
++		)
++		await config.messageState.saveClineMessagesAndUpdateHistory()
++		await config.services.contextManager.triggerApplyStandardContextTruncationNoticeChange(
++			Date.now(),
++			await ensureTaskDirectoryExists(config.taskId),
++			apiConversationHistory,
++		)
+ 
+-			return formatResponse.toolResult(formatResponse.condense())
+-		}
++		return formatResponse.toolResult(formatResponse.condense())
+ 	}
+ 
+ 	async handlePartialBlock(block: ToolUse, uiHelpers: StronglyTypedUIHelpers): Promise<void> {
+diff --git a/src/core/task/tools/handlers/ExecuteCommandToolHandler.ts b/src/core/task/tools/handlers/ExecuteCommandToolHandler.ts
+index 073cd2497..1407462a5 100644
+--- a/src/core/task/tools/handlers/ExecuteCommandToolHandler.ts
++++ b/src/core/task/tools/handlers/ExecuteCommandToolHandler.ts
+@@ -3,7 +3,7 @@ import { formatResponse } from "@core/prompts/responses"
+ import { WorkspacePathAdapter } from "@core/workspace/WorkspacePathAdapter"
+ import { showApprovalNotification, showSystemNotification } from "@integrations/notifications"
+ import { COMMAND_REQ_APP_STRING } from "@shared/combineCommandSequences"
+-import { ClineAsk } from "@shared/ExtensionMessage"
++import type { ClineAsk } from "@shared/ExtensionMessage"
+ import { arePathsEqual } from "@utils/path"
+ import { telemetryService } from "@/services/telemetry"
+ import { ClineDefaultTool } from "@/shared/tools"
+diff --git a/src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts b/src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts
+index 616aa1c5e..679104d50 100644
+--- a/src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts
++++ b/src/core/task/tools/handlers/ListCodeDefinitionNamesToolHandler.ts
+@@ -131,7 +131,7 @@ export class ListCodeDefinitionNamesToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to analyze code definitions in ${getWorkspaceBasename(absolutePath, "ListCodeDefinitionNamesToolHandler.notification")}`
++			const notificationMessage = `Resonance wants to analyze code definitions in ${getWorkspaceBasename(absolutePath, "ListCodeDefinitionNamesToolHandler.notification")}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/ListFilesToolHandler.ts b/src/core/task/tools/handlers/ListFilesToolHandler.ts
+index d73435c40..2e9bbaea9 100644
+--- a/src/core/task/tools/handlers/ListFilesToolHandler.ts
++++ b/src/core/task/tools/handlers/ListFilesToolHandler.ts
+@@ -151,7 +151,7 @@ export class ListFilesToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to view directory ${getWorkspaceBasename(absolutePath, "ListFilesToolHandler.notification")}/`
++			const notificationMessage = `Resonance wants to view directory ${getWorkspaceBasename(absolutePath, "ListFilesToolHandler.notification")}/`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/NewTaskHandler.ts b/src/core/task/tools/handlers/NewTaskHandler.ts
+index fc6029b80..eb4f95197 100644
+--- a/src/core/task/tools/handlers/NewTaskHandler.ts
++++ b/src/core/task/tools/handlers/NewTaskHandler.ts
+@@ -38,8 +38,8 @@ export class NewTaskHandler implements IToolHandler, IPartialBlockHandler {
+ 		// Show notification if enabled
+ 		if (config.autoApprovalSettings.enableNotifications) {
+ 			showSystemNotification({
+-				subtitle: "Cline wants to start a new task...",
+-				message: `Cline is suggesting to start a new task with: ${context}`,
++				subtitle: "Resonance wants to start a new task...",
++				message: `Resonance is suggesting to start a new task with: ${context}`,
+ 			})
+ 		}
+ 
+@@ -59,9 +59,8 @@ export class NewTaskHandler implements IToolHandler, IPartialBlockHandler {
+ 				images,
+ 				fileContentString,
+ 			)
+-		} else {
+-			// If no response, the user clicked the "Create New Task" button
+-			return formatResponse.toolResult(`The user has created a new task with the provided context.`)
+ 		}
++		// If no response, the user clicked the "Create New Task" button
++		return formatResponse.toolResult(`The user has created a new task with the provided context.`)
+ 	}
+ }
+diff --git a/src/core/task/tools/handlers/ReadFileToolHandler.ts b/src/core/task/tools/handlers/ReadFileToolHandler.ts
+index bf9d134f7..de8e73a2f 100644
+--- a/src/core/task/tools/handlers/ReadFileToolHandler.ts
++++ b/src/core/task/tools/handlers/ReadFileToolHandler.ts
+@@ -5,7 +5,7 @@ import { getWorkspaceBasename, resolveWorkspacePath } from "@core/workspace"
+ import { extractFileContent, type FileContentResult } from "@integrations/misc/extract-file-content"
+ import { arePathsEqual, getReadablePath, isLocatedInWorkspace } from "@utils/path"
+ import { telemetryService } from "@/services/telemetry"
+-import { ClineSayTool } from "@/shared/ExtensionMessage"
++import type { ClineSayTool } from "@/shared/ExtensionMessage"
+ import { ClineDefaultTool } from "@/shared/tools"
+ import type { ToolResponse } from "../../index"
+ import { showNotificationForApproval } from "../../utils"
+@@ -245,7 +245,7 @@ export class ReadFileToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to read ${getWorkspaceBasename(absolutePath, "ReadFileToolHandler.notification")}`
++			const notificationMessage = `Resonance wants to read ${getWorkspaceBasename(absolutePath, "ReadFileToolHandler.notification")}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/ReportBugHandler.ts b/src/core/task/tools/handlers/ReportBugHandler.ts
+index 15976a2b6..bf8ad04c1 100644
+--- a/src/core/task/tools/handlers/ReportBugHandler.ts
++++ b/src/core/task/tools/handlers/ReportBugHandler.ts
+@@ -68,8 +68,8 @@ export class ReportBugHandler implements IToolHandler, IPartialBlockHandler {
+ 		// Show notification if enabled
+ 		if (config.autoApprovalSettings.enableNotifications) {
+ 			showSystemNotification({
+-				subtitle: "Cline wants to create a github issue...",
+-				message: `Cline is suggesting to create a github issue with the title: ${title}`,
++				subtitle: "Resonance wants to create a github issue...",
++				message: `Resonance is suggesting to create a github issue with the title: ${title}`,
+ 			})
+ 		}
+ 
+@@ -112,29 +112,28 @@ export class ReportBugHandler implements IToolHandler, IPartialBlockHandler {
+ 				images,
+ 				fileContentString,
+ 			)
+-		} else {
+-			// If no response, the user accepted the bug report
+-			try {
+-				// Create a Map of parameters for the GitHub issue
+-				const params = new Map<string, string>()
+-				params.set("title", title)
+-				params.set("operating-system", operatingSystem)
+-				params.set("cline-version", clineVersion)
+-				params.set("system-info", systemInfo)
+-				params.set("additional-context", additional_context)
+-				params.set("what-happened", what_happened)
+-				params.set("steps", steps_to_reproduce)
+-				params.set("provider-model", providerAndModel)
+-				params.set("logs", api_request_output)
+-
+-				// Use our utility function to create and open the GitHub issue URL
+-				// This bypasses VS Code's URI handling issues with special characters
+-				await createAndOpenGitHubIssue("cline", "cline", "bug_report.yml", params)
+-			} catch (error) {
+-				Logger.error(`An error occurred while attempting to report the bug: ${error}`)
+-			}
+-
+-			return formatResponse.toolResult(`The user accepted the creation of the Github issue.`)
+ 		}
++		// If no response, the user accepted the bug report
++		try {
++			// Create a Map of parameters for the GitHub issue
++			const params = new Map<string, string>()
++			params.set("title", title)
++			params.set("operating-system", operatingSystem)
++			params.set("cline-version", clineVersion)
++			params.set("system-info", systemInfo)
++			params.set("additional-context", additional_context)
++			params.set("what-happened", what_happened)
++			params.set("steps", steps_to_reproduce)
++			params.set("provider-model", providerAndModel)
++			params.set("logs", api_request_output)
++
++			// Use our utility function to create and open the GitHub issue URL
++			// This bypasses VS Code's URI handling issues with special characters
++			await createAndOpenGitHubIssue("cline", "cline", "bug_report.yml", params)
++		} catch (error) {
++			Logger.error(`An error occurred while attempting to report the bug: ${error}`)
++		}
++
++		return formatResponse.toolResult(`The user accepted the creation of the Github issue.`)
+ 	}
+ }
+diff --git a/src/core/task/tools/handlers/SearchFilesToolHandler.ts b/src/core/task/tools/handlers/SearchFilesToolHandler.ts
+index d7d48d26d..76251a81a 100644
+--- a/src/core/task/tools/handlers/SearchFilesToolHandler.ts
++++ b/src/core/task/tools/handlers/SearchFilesToolHandler.ts
+@@ -7,7 +7,7 @@ import { parseWorkspaceInlinePath } from "@/core/workspace/utils/parseWorkspaceI
+ import { WorkspacePathAdapter } from "@/core/workspace/WorkspacePathAdapter"
+ import { resolveWorkspacePath } from "@/core/workspace/WorkspaceResolver"
+ import { telemetryService } from "@/services/telemetry"
+-import { ClineSayTool } from "@/shared/ExtensionMessage"
++import type { ClineSayTool } from "@/shared/ExtensionMessage"
+ import { Logger } from "@/shared/services/Logger"
+ import { ClineDefaultTool } from "@/shared/tools"
+ import type { ToolResponse } from "../../index"
+@@ -346,7 +346,7 @@ export class SearchFilesToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to search files for ${regex}`
++			const notificationMessage = `Resonance wants to search files for ${regex}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/core/task/tools/handlers/UseMcpToolHandler.ts b/src/core/task/tools/handlers/UseMcpToolHandler.ts
+index 614607d4e..5d9efdd8b 100644
+--- a/src/core/task/tools/handlers/UseMcpToolHandler.ts
++++ b/src/core/task/tools/handlers/UseMcpToolHandler.ts
+@@ -1,6 +1,6 @@
+ import type { ToolUse } from "@core/assistant-message"
+ import { formatResponse } from "@core/prompts/responses"
+-import { ClineAsk, ClineAskUseMcpServer } from "@shared/ExtensionMessage"
++import type { ClineAsk, ClineAskUseMcpServer } from "@shared/ExtensionMessage"
+ import { telemetryService } from "@/services/telemetry"
+ import { truncateContent } from "@/shared/content-limits"
+ import { ClineDefaultTool } from "@/shared/tools"
+@@ -71,7 +71,10 @@ export class UseMcpToolHandler implements IFullyManagedTool {
+ 				parsedArguments = JSON.parse(mcp_arguments)
+ 			} catch (_error) {
+ 				config.taskState.consecutiveMistakeCount++
+-				await config.callbacks.say("error", `Cline tried to use ${tool_name} with an invalid JSON argument. Retrying...`)
++				await config.callbacks.say(
++					"error",
++					`Resonance tried to use ${tool_name} with an invalid JSON argument. Retrying...`,
++				)
+ 				return formatResponse.toolError(formatResponse.invalidMcpToolArgumentError(server_name, tool_name))
+ 			}
+ 		}
+@@ -108,7 +111,7 @@ export class UseMcpToolHandler implements IFullyManagedTool {
+ 			)
+ 		} else {
+ 			// Manual approval flow
+-			const notificationMessage = `Cline wants to use ${tool_name || "unknown tool"} on ${server_name || "unknown server"}`
++			const notificationMessage = `Resonance wants to use ${tool_name || "unknown tool"} on ${server_name || "unknown server"}`
+ 
+ 			// Show notification
+ 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+@@ -128,18 +131,17 @@ export class UseMcpToolHandler implements IFullyManagedTool {
+ 					block.isNativeToolCall,
+ 				)
+ 				return formatResponse.toolDenied()
+-			} else {
+-				telemetryService.captureToolUsage(
+-					config.ulid,
+-					block.name,
+-					config.api.getModel().id,
+-					provider,
+-					false,
+-					true,
+-					undefined,
+-					block.isNativeToolCall,
+-				)
+ 			}
++			telemetryService.captureToolUsage(
++				config.ulid,
++				block.name,
++				config.api.getModel().id,
++				provider,
++				false,
++				true,
++				undefined,
++				block.isNativeToolCall,
++			)
+ 		}
+ 
+ 		// Run PreToolUse hook after approval but before execution
+diff --git a/src/core/task/tools/handlers/WebFetchToolHandler.ts b/src/core/task/tools/handlers/WebFetchToolHandler.ts
+index 3d8dbb597..26e1ee2e7 100644
+--- a/src/core/task/tools/handlers/WebFetchToolHandler.ts
++++ b/src/core/task/tools/handlers/WebFetchToolHandler.ts
+@@ -1,4 +1,4 @@
+-import { ClineAsk, ClineSayTool } from "@shared/ExtensionMessage"
++import type { ClineAsk, ClineSayTool } from "@shared/ExtensionMessage"
+ import { ClineDefaultTool } from "@shared/tools"
+ import axios from "axios"
+ import { ClineEnv } from "@/config"
+@@ -8,9 +8,9 @@ import { featureFlagsService } from "@/services/feature-flags"
+ import { telemetryService } from "@/services/telemetry"
+ import { CLINE_ACCOUNT_AUTH_ERROR_MESSAGE } from "@/shared/ClineAccount"
+ import { getAxiosSettings } from "@/shared/net"
+-import { ToolUse } from "../../../assistant-message"
++import type { ToolUse } from "../../../assistant-message"
+ import { formatResponse } from "../../../prompts/responses"
+-import { ToolResponse } from "../.."
++import type { ToolResponse } from "../.."
+ import { showNotificationForApproval } from "../../utils"
+ import type { IFullyManagedTool } from "../ToolExecutorCoordinator"
+ import type { TaskConfig } from "../types/TaskConfig"
+@@ -55,7 +55,7 @@ export class WebFetchToolHandler implements IFullyManagedTool {
+ 			const clineWebToolsEnabled = config.services.stateManager.getGlobalSettingsKey("clineWebToolsEnabled")
+ 			const featureFlagEnabled = featureFlagsService.getWebtoolsEnabled()
+ 			if (provider !== "cline" || !clineWebToolsEnabled || !featureFlagEnabled) {
+-				return formatResponse.toolError("Cline web tools are currently disabled.")
++				return formatResponse.toolError("Resonance web tools are currently disabled.")
+ 			}
+ 
+ 			// Validate required parameters
+@@ -95,7 +95,7 @@ export class WebFetchToolHandler implements IFullyManagedTool {
+ 			} else {
+ 				// Manual approval flow
+ 				showNotificationForApproval(
+-					`Cline wants to fetch content from ${url}`,
++					`Resonance wants to fetch content from ${url}`,
+ 					config.autoApprovalSettings.enableNotifications,
+ 				)
+ 				await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
+@@ -113,18 +113,17 @@ export class WebFetchToolHandler implements IFullyManagedTool {
+ 						block.isNativeToolCall,
+ 					)
+ 					return formatResponse.toolDenied()
+-				} else {
+-					telemetryService.captureToolUsage(
+-						config.ulid,
+-						block.name,
+-						config.api.getModel().id,
+-						provider,
+-						false,
+-						true,
+-						undefined,
+-						block.isNativeToolCall,
+-					)
+ 				}
++				telemetryService.captureToolUsage(
++					config.ulid,
++					block.name,
++					config.api.getModel().id,
++					provider,
++					false,
++					true,
++					undefined,
++					block.isNativeToolCall,
++				)
+ 			}
+ 
+ 			// Run PreToolUse hook after approval but before execution
+diff --git a/src/core/task/tools/handlers/WebSearchToolHandler.ts b/src/core/task/tools/handlers/WebSearchToolHandler.ts
+index 4dcb150ac..62a4e08cc 100644
+--- a/src/core/task/tools/handlers/WebSearchToolHandler.ts
++++ b/src/core/task/tools/handlers/WebSearchToolHandler.ts
+@@ -1,4 +1,4 @@
+-import { ClineAsk, ClineSayTool } from "@shared/ExtensionMessage"
++import type { ClineAsk, ClineSayTool } from "@shared/ExtensionMessage"
+ import { ClineDefaultTool } from "@shared/tools"
+ import axios from "axios"
+ import { ClineEnv } from "@/config"
+@@ -9,9 +9,9 @@ import { telemetryService } from "@/services/telemetry"
+ import { parsePartialArrayString } from "@/shared/array"
+ import { CLINE_ACCOUNT_AUTH_ERROR_MESSAGE } from "@/shared/ClineAccount"
+ import { getAxiosSettings } from "@/shared/net"
+-import { ToolUse } from "../../../assistant-message"
++import type { ToolUse } from "../../../assistant-message"
+ import { formatResponse } from "../../../prompts/responses"
+-import { ToolResponse } from "../.."
++import type { ToolResponse } from "../.."
+ import { showNotificationForApproval } from "../../utils"
+ import type { IFullyManagedTool } from "../ToolExecutorCoordinator"
+ import type { TaskConfig } from "../types/TaskConfig"
+@@ -57,7 +57,7 @@ export class WebSearchToolHandler implements IFullyManagedTool {
+ 			const clineWebToolsEnabled = config.services.stateManager.getGlobalSettingsKey("clineWebToolsEnabled")
+ 			const featureFlagEnabled = featureFlagsService.getWebtoolsEnabled()
+ 			if (provider !== "cline" || !clineWebToolsEnabled || !featureFlagEnabled) {
+-				return formatResponse.toolError("Cline web tools are currently disabled.")
++				return formatResponse.toolError("Resonance web tools are currently disabled.")
+ 			}
+ 
+ 			// Validate required parameters
+@@ -103,7 +103,7 @@ export class WebSearchToolHandler implements IFullyManagedTool {
+ 			} else {
+ 				// Manual approval flow
+ 				showNotificationForApproval(
+-					`Cline wants to search for: ${query}`,
++					`Resonance wants to search for: ${query}`,
+ 					config.autoApprovalSettings.enableNotifications,
+ 				)
+ 				await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
+@@ -121,18 +121,17 @@ export class WebSearchToolHandler implements IFullyManagedTool {
+ 						block.isNativeToolCall,
+ 					)
+ 					return formatResponse.toolDenied()
+-				} else {
+-					telemetryService.captureToolUsage(
+-						config.ulid,
+-						block.name,
+-						config.api.getModel().id,
+-						provider,
+-						false,
+-						true,
+-						undefined,
+-						block.isNativeToolCall,
+-					)
+ 				}
++				telemetryService.captureToolUsage(
++					config.ulid,
++					block.name,
++					config.api.getModel().id,
++					provider,
++					false,
++					true,
++					undefined,
++					block.isNativeToolCall,
++				)
+ 			}
+ 
+ 			// Run PreToolUse hook after approval but before execution
+diff --git a/src/core/task/tools/handlers/WriteToFileToolHandler.ts b/src/core/task/tools/handlers/WriteToFileToolHandler.ts
+index 017af7535..d5afb2bbc 100644
+--- a/src/core/task/tools/handlers/WriteToFileToolHandler.ts
++++ b/src/core/task/tools/handlers/WriteToFileToolHandler.ts
+@@ -234,7 +234,7 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
+ 				await setTimeoutPromise(3_500)
+ 			} else {
+ 				// Manual approval flow with detailed feedback handling
+-				const notificationMessage = `Cline wants to ${fileExists ? "edit" : "create"} ${getWorkspaceBasename(relPath, "WriteToFile.notification")}`
++				const notificationMessage = `Resonance wants to ${fileExists ? "edit" : "create"} ${getWorkspaceBasename(relPath, "WriteToFile.notification")}`
+ 
+ 				// Show notification
+ 				showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
+diff --git a/src/hosts/vscode/hostbridge/workspace/executeCommandInTerminal.ts b/src/hosts/vscode/hostbridge/workspace/executeCommandInTerminal.ts
+index e6b4a2b56..d1b176269 100644
+--- a/src/hosts/vscode/hostbridge/workspace/executeCommandInTerminal.ts
++++ b/src/hosts/vscode/hostbridge/workspace/executeCommandInTerminal.ts
+@@ -1,4 +1,4 @@
+-import { ExecuteCommandInTerminalRequest, ExecuteCommandInTerminalResponse } from "@shared/proto/host/workspace"
++import { type ExecuteCommandInTerminalRequest, ExecuteCommandInTerminalResponse } from "@shared/proto/host/workspace"
+ import * as vscode from "vscode"
+ import { Logger } from "@/shared/services/Logger"
+ 
+@@ -13,8 +13,7 @@ export async function executeCommandInTerminal(
+ 	try {
+ 		// Create terminal with fixed options
+ 		const terminalOptions: vscode.TerminalOptions = {
+-			name: "Cline",
+-			iconPath: new vscode.ThemeIcon("cline-icon"),
++			name: "Resonance",
+ 			env: {
+ 				CLINE_ACTIVE: "true",
+ 			},
+diff --git a/src/hosts/vscode/review/VscodeCommentReviewController.ts b/src/hosts/vscode/review/VscodeCommentReviewController.ts
+index 718563192..bba35e826 100644
+--- a/src/hosts/vscode/review/VscodeCommentReviewController.ts
++++ b/src/hosts/vscode/review/VscodeCommentReviewController.ts
+@@ -25,12 +25,12 @@ export class VscodeCommentReviewController extends CommentReviewController imple
+ 
+ 	/** The currently streaming comment thread */
+ 	private streamingThread: vscode.CommentThread | null = null
+-	private streamingContent: string = ""
++	private streamingContent = ""
+ 
+ 	constructor() {
+ 		super()
+ 		// Create the comment controller
+-		this.commentController = vscode.comments.createCommentController("cline-ai-review", "Cline AI Review")
++		this.commentController = vscode.comments.createCommentController("cline-ai-review", "Resonance AI Review")
+ 
+ 		// Configure options for the reply input
+ 		this.commentController.options = {
+@@ -134,7 +134,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
+ 		endLine: number,
+ 		relativePath?: string,
+ 		fileContent?: string,
+-		revealComment: boolean = false,
++		revealComment = false,
+ 	): void {
+ 		// Use virtual diff URI if relativePath and fileContent are provided
+ 		let uri: vscode.Uri
+diff --git a/src/hosts/vscode/terminal/VscodeTerminalRegistry.ts b/src/hosts/vscode/terminal/VscodeTerminalRegistry.ts
+index f15fdaa11..f3768ae4d 100644
+--- a/src/hosts/vscode/terminal/VscodeTerminalRegistry.ts
++++ b/src/hosts/vscode/terminal/VscodeTerminalRegistry.ts
+@@ -23,8 +23,7 @@ export class TerminalRegistry {
+ 	static createTerminal(cwd?: string | vscode.Uri | undefined, shellPath?: string): TerminalInfo {
+ 		const terminalOptions: vscode.TerminalOptions = {
+ 			cwd,
+-			name: "Cline",
+-			iconPath: new vscode.ThemeIcon("cline-icon"),
++			name: "Resonance",
+ 			env: {
+ 				CLINE_ACTIVE: "true",
+ 			},
+diff --git a/src/integrations/terminal/standalone/StandaloneTerminalManager.ts b/src/integrations/terminal/standalone/StandaloneTerminalManager.ts
+index 270eecdf5..b45e3cd0f 100644
+--- a/src/integrations/terminal/standalone/StandaloneTerminalManager.ts
++++ b/src/integrations/terminal/standalone/StandaloneTerminalManager.ts
+@@ -166,7 +166,7 @@ export class StandaloneTerminalManager implements ITerminalManager {
+ 		// Create new terminal
+ 		const newTerminalInfo = this.registry.createTerminal({
+ 			cwd: cwd,
+-			name: `Cline Terminal ${this.registry.size + 1}`,
++			name: `Resonance Terminal ${this.registry.size + 1}`,
+ 		})
+ 		this.terminalIds.add(newTerminalInfo.id)
+ 		return newTerminalInfo
+diff --git a/src/registry.ts b/src/registry.ts
+index 2a0df7ef2..e8ecfc1d6 100644
+--- a/src/registry.ts
++++ b/src/registry.ts
+@@ -1,7 +1,7 @@
+ import { name, publisher, version } from "../package.json"
+ import { HostProvider } from "./hosts/host-provider"
+ 
+-const prefix = name === "claude-dev" ? "cline" : name
++const prefix = name === "claude-dev" || name === "resonance" ? "cline" : name
+ 
+ /**
+  * List of commands with the name of the extension they are registered under.
+diff --git a/src/shared/ExtensionMessage.ts b/src/shared/ExtensionMessage.ts
+index 6aa9453a6..2b7a35bda 100644
+--- a/src/shared/ExtensionMessage.ts
++++ b/src/shared/ExtensionMessage.ts
+@@ -1,22 +1,22 @@
+ // type that represents json data that is sent from extension to webview, called ExtensionMessage and has 'type' enum which can be 'plusButtonClicked' or 'settingsButtonClicked' or 'hello'
+ 
+-import { WorkspaceRoot } from "@shared/multi-root/types"
+-import { RemoteConfigFields } from "@shared/storage/state-keys"
++import type { WorkspaceRoot } from "@shared/multi-root/types"
++import type { RemoteConfigFields } from "@shared/storage/state-keys"
+ import type { Environment } from "../config"
+-import { AutoApprovalSettings } from "./AutoApprovalSettings"
+-import { ApiConfiguration } from "./api"
+-import { BrowserSettings } from "./BrowserSettings"
+-import { ClineFeatureSetting } from "./ClineFeatureSetting"
+-import { BannerCardData } from "./cline/banner"
+-import { ClineRulesToggles } from "./cline-rules"
+-import { FocusChainSettings } from "./FocusChainSettings"
+-import { HistoryItem } from "./HistoryItem"
+-import { McpDisplayMode } from "./McpDisplayMode"
+-import { ClineMessageModelInfo } from "./messages"
+-import { OnboardingModelGroup } from "./proto/cline/state"
+-import { Mode } from "./storage/types"
+-import { TelemetrySetting } from "./TelemetrySetting"
+-import { UserInfo } from "./UserInfo"
++import type { AutoApprovalSettings } from "./AutoApprovalSettings"
++import type { ApiConfiguration } from "./api"
++import type { BrowserSettings } from "./BrowserSettings"
++import type { ClineFeatureSetting } from "./ClineFeatureSetting"
++import type { BannerCardData } from "./cline/banner"
++import type { ClineRulesToggles } from "./cline-rules"
++import type { FocusChainSettings } from "./FocusChainSettings"
++import type { HistoryItem } from "./HistoryItem"
++import type { McpDisplayMode } from "./McpDisplayMode"
++import type { ClineMessageModelInfo } from "./messages"
++import type { OnboardingModelGroup } from "./proto/cline/state"
++import type { Mode } from "./storage/types"
++import type { TelemetrySetting } from "./TelemetrySetting"
++import type { UserInfo } from "./UserInfo"
+ // webview will hold state
+ export interface ExtensionMessage {
+ 	type: "grpc_response" // New type for gRPC responses
+@@ -83,6 +83,7 @@ export interface ExtensionState {
+ 	mcpResponsesCollapsed?: boolean
+ 	strictPlanModeEnabled?: boolean
+ 	yoloModeToggled?: boolean
++	autoApproveAllToggled?: boolean
+ 	useAutoCondense?: boolean
+ 	subagentsEnabled?: boolean
+ 	clineWebToolsEnabled?: ClineFeatureSetting
+diff --git a/src/shared/cline/banner.ts b/src/shared/cline/banner.ts
+index 5cb2da9aa..ecadbaa2f 100644
+--- a/src/shared/cline/banner.ts
++++ b/src/shared/cline/banner.ts
+@@ -86,82 +86,4 @@ export interface BannerAction {
+  * TODO: Backend would return a similar JSON structure in the future which we will replace this with.
+  */
+ 
+-export const BANNER_DATA: BannerCardData[] = [
+-	// Sonnet 4.6 banner
+-	{
+-		// Bump this version string when copy/CTA changes and you want the banner to reappear.
+-		id: "claude-sonnet-4-6-2026-feb-18",
+-		icon: "sparkles",
+-		title: "Try Claude Sonnet 4.6",
+-		description: "Anthropic's latest model with strong reasoning and coding performance.",
+-		actions: [
+-			{
+-				title: "Use Sonnet 4.6",
+-				action: BannerActionType.SetModel,
+-				arg: "anthropic/claude-sonnet-4.6",
+-				tab: "recommended",
+-			},
+-		],
+-	},
+-
+-	// Minimax free promo banner
+-	{
+-		// Bump this version string when copy/CTA changes and you want the banner to reappear.
+-		id: "minimax-m2.5-free-2026-feb-18",
+-		icon: "zap",
+-		title: "Try MiniMax M2.5 Free",
+-		description: "SOTA coding capability with lightning fast inference, free in Cline.",
+-		actions: [
+-			{
+-				title: "Try now",
+-				action: BannerActionType.SetModel,
+-				arg: "minimax/minimax-m2.5",
+-				tab: "free",
+-			},
+-		],
+-	},
+-
+-	// ChatGPT integration banner
+-	{
+-		id: "chatgpt-integration-v1",
+-		icon: "megaphone",
+-		title: "Use ChatGPT with Cline",
+-		description:
+-			"Bring your ChatGPT subscription to Cline! Use your existing plan directly with no per token costs or API keys to manage.",
+-		actions: [
+-			{
+-				title: "Connect",
+-				action: BannerActionType.ShowApiSettings,
+-				arg: "openai-codex", // Pre-select OpenAI Codex provider
+-			},
+-		],
+-	},
+-
+-	// Jupyter Notebooks banner
+-	{
+-		id: "jupyter-notebooks-v1",
+-		icon: "book-open",
+-		title: "Jupyter Notebooks",
+-		description:
+-			"Comprehensive AI-assisted editing of `.ipynb` files with full cell-level context awareness. [Learn More →](https://docs.cline.bot/features/jupyter-notebooks)",
+-	},
+-
+-	// Platform-specific banner (Windows)
+-	{
+-		id: "cli-info-windows-v1",
+-		icon: "terminal",
+-		title: "Cline CLI Info",
+-		platforms: ["windows"] satisfies BannerCardData["platforms"],
+-		description:
+-			"Available for macOS and Linux. Coming soon to other platforms. [Learn more](https://docs.cline.bot/cline-cli/overview)",
+-	},
+-
+-	// Info banner with inline link
+-	{
+-		id: "info-banner-v1",
+-		icon: "lightbulb",
+-		title: "Use Cline in Right Sidebar",
+-		description:
+-			"For the best experience, drag the Cline icon to your right sidebar. This keeps your file explorer and editor visible while you chat with Cline, making it easier to navigate your codebase and see changes in real-time. [See how →](https://docs.cline.bot/features/customization/opening-cline-in-sidebar)",
+-	},
+-]
++export const BANNER_DATA: BannerCardData[] = []
+diff --git a/walkthrough/step1.md b/walkthrough/step1.md
+index b1eb6fdb3..d1660db99 100644
+--- a/walkthrough/step1.md
++++ b/walkthrough/step1.md
+@@ -1,7 +1,7 @@
+-# Beyond Autocomplete: True Agentic Planning
++# The Prime Directive: You're a State Machine
+ 
+-**Cline analyzes your request, explores your code, and presents a clear plan.**
++**Resonance maintains persistent memory across all sessions.**
+ 
+-Watch Cline break down complex tasks, ask clarifying questions, and outline its approach. Understand the 'why' before any code is written, ensuring changes align with your architecture and intent.
++You are NOT a chatbot. You are a State Machine. Every session starts by reading `.resonance/01_state.md` to understand the current work package, goals, progress, and next steps. This ensures continuity across sessions without losing context.
+ 
+-![Cline planning demonstration](https://storage.googleapis.com/cline_public_images/docs/assets/cline-plan-hifi-1_compress.webp)
+\ No newline at end of file
++![Resonance State Machine](https://storage.googleapis.com/cline_public_images/docs/assets/cline-plan-hifi-1_compress.webp)
+\ No newline at end of file
+diff --git a/walkthrough/step2.md b/walkthrough/step2.md
+index 318322821..d0fcd7f8d 100644
+--- a/walkthrough/step2.md
++++ b/walkthrough/step2.md
+@@ -1,7 +1,12 @@
+-# Deep Codebase Intelligence
++# Persistent Memory System
+ 
+-**Cline starts with broad context and explores deeply where needed.**
++**Resonance remembers everything through the `.resonance/` directory.**
+ 
+-Cline is designed with inherent codebase intelligence. It doesn't operate in a vacuum, but starts with a structural understanding of your project. Before making changes, it performs targeted agentic exploration to gain any additional specific context required, ensuring its actions are always well-informed and aligned with your architecture.
++Your memory is bound to three key files:
++- `00_soul.md` - Project vision and North Star
++- `01_state.md` - Current work package, goals, and next steps
++- `02_memory.md` - Immutable log of lessons learned
+ 
+-![Cline Deep Codebase Intelligence Demo](https://storage.googleapis.com/cline_public_images/docs/assets/cline-reading-codebase-hifi-2_compress.webp)
++Every session reads these files to restore full context and continue where you left off.
++
++![Resonance Memory System](https://storage.googleapis.com/cline_public_images/docs/assets/cline-reading-codebase-hifi-2_compress.webp)
+diff --git a/walkthrough/step3.md b/walkthrough/step3.md
+index d60628517..8b0a6f88b 100644
+--- a/walkthrough/step3.md
++++ b/walkthrough/step3.md
+@@ -1,7 +1,11 @@
+-# Always Use the Best Models
++# The Synch Rule: Micro vs Macro Tasks
+ 
+-**Connect your keys for Anthropic (Claude), Google (Gemini), OpenAI (GPT), and other leading LLMs.**
++**Manage micro-tasks in chat. Update state only at milestones.**
+ 
+-Cline puts you at the forefront of AI. Bring your own API keys for leading models like Anthropic (Claude), Google (Gemini), and OpenAI (GPT). Always leverage the most powerful State-of-the-Art (SOTA) capabilities, ensuring you control both cost and cutting-edge performance.
++- **Micro-Tasks**: Checkboxes and small TODOs stay in the chat (your RAM)
++- **Macro-State**: Only update `01_state.md` when reaching milestones (your Hard Drive)
++- **Why?** This prevents clutter and maintains a clean long-term memory
+ 
+-![Cline Models Demo](https://storage.googleapis.com/cline_public_images/docs/assets/clines-models-hifi-3_compress.webp)
++`01_state.md` is for future sessions. The chat is for the current session.
++
++![Resonance Synch Rule](https://storage.googleapis.com/cline_public_images/docs/assets/clines-models-hifi-3_compress.webp)
+diff --git a/walkthrough/step4.md b/walkthrough/step4.md
+index 9ca8de92a..320030059 100644
+--- a/walkthrough/step4.md
++++ b/walkthrough/step4.md
+@@ -1,7 +1,12 @@
+-# Unlock Specialized Capabilities with MCP
++# Knowledge Management: docs/ and Backlog
+ 
+-**The Model Context Protocol (MCP) connects Cline to a world of powerful tools.**
++**Organize permanent knowledge in `docs/`, quick TODOs in `03_backlog.md`.**
+ 
+-Go beyond local code. With the Model Context Protocol (MCP), Cline accesses vital context from external datasources like databases and APIs. It can interact with these platforms and leverage a growing marketplace of specialized, secure tools to tackle complex, real-world development tasks.
++- **Work Package** → `01_state.md`
++- **Permanent Docs** → `docs/` (PRDs, specs, research)
++- **Quick TODOs** → `03_backlog.md` (low-priority items, ideas)
++- **Research Findings** → `02_memory.md` (with URLs and insights)
+ 
+-![Cline MCP Servers Demo](https://storage.googleapis.com/cline_public_images/docs/assets/clines-mcp-servers-4_compress.webp)
++Use YAML frontmatter in docs/ with `read_when:` conditions for smart document discovery.
++
++![Resonance Knowledge Management](https://storage.googleapis.com/cline_public_images/docs/assets/clines-mcp-servers-4_compress.webp)
+diff --git a/walkthrough/step5.md b/walkthrough/step5.md
+index bf5fdcc7f..786248f00 100644
+--- a/walkthrough/step5.md
++++ b/walkthrough/step5.md
+@@ -1,7 +1,12 @@
+-# No Black Box: Full Visibility & Control
++# You're Always in Control
+ 
+-**Cline operates with complete transparency, showing you every file read and every proposed diff.**
++**Full transparency with bring-your-own-key (BYOK).**
+ 
+-Understand exactly what Cline is doing and why—no obfuscation. Review all actions and approve changes before they're made. Cline uses checkpoints, allowing you to easily revert if needed, maintaining full control over your codebase. With BYO-key, you also have clear cost transparency.
++Review all actions before they're executed. Bring your own API keys for Anthropic (Claude), Google (Gemini), OpenAI (GPT), and more. You control costs and have full visibility into every operation.
+ 
+-![Cline Transparency Demo](https://storage.googleapis.com/cline_public_images/docs/assets/clines-transparency-hifi-5_compress.webp)
++- Review plans and file changes
++- Approve before execution
++- Clear cost transparency with BYOK
++- MCP tools for extended capabilities
++
++![Resonance Control](https://storage.googleapis.com/cline_public_images/docs/assets/clines-transparency-hifi-5_compress.webp)
+diff --git a/webview-ui/src/components/chat/BrowserSessionRow.tsx b/webview-ui/src/components/chat/BrowserSessionRow.tsx
+index 2a449cf48..fef4c2479 100644
+--- a/webview-ui/src/components/chat/BrowserSessionRow.tsx
++++ b/webview-ui/src/components/chat/BrowserSessionRow.tsx
+@@ -1,10 +1,11 @@
+ import { BROWSER_VIEWPORT_PRESETS } from "@shared/BrowserSettings"
+-import { BrowserAction, BrowserActionResult, ClineMessage, ClineSayBrowserAction } from "@shared/ExtensionMessage"
++import type { BrowserAction, BrowserActionResult, ClineMessage, ClineSayBrowserAction } from "@shared/ExtensionMessage"
+ import { StringRequest } from "@shared/proto/cline/common"
+ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+ import deepEqual from "fast-deep-equal"
+ import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
+-import React, { CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
++import type React from "react"
++import { type CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+ import { useSize } from "react-use"
+ import styled from "styled-components"
+ import { BrowserSettingsMenu } from "@/components/browser/BrowserSettingsMenu"
+@@ -305,7 +306,7 @@ const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
+ 	)
+ 
+ 	useEffect(() => {
+-		if (actionHeight === 0 || actionHeight === Infinity) {
++		if (actionHeight === 0 || actionHeight === Number.POSITIVE_INFINITY) {
+ 			return
+ 		}
+ 		if (actionHeight > maxActionHeight) {
+@@ -357,10 +358,10 @@ const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
+ 				{isBrowsing && !isLastMessageResume ? (
+ 					<ProgressIndicator />
+ 				) : (
+-					<span className="codicon codicon-inspect" style={browserIconStyle}></span>
++					<span className="codicon codicon-inspect" style={browserIconStyle} />
+ 				)}
+ 				<span style={approveTextStyle}>
+-					{isAutoApproved ? "Cline is using the browser:" : "Cline wants to use the browser:"}
++					{isAutoApproved ? "Resonance is using the browser:" : "Resonance wants to use the browser:"}
+ 				</span>
+ 			</div>
+ 			<div
+@@ -417,8 +418,8 @@ const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
+ 						<BrowserCursor
+ 							style={{
+ 								position: "absolute",
+-								top: `${(parseInt(mousePosition.split(",")[1]) / browserSettings.viewport.height) * 100}%`,
+-								left: `${(parseInt(mousePosition.split(",")[0]) / browserSettings.viewport.width) * 100}%`,
++								top: `${(Number.parseInt(mousePosition.split(",")[1]) / browserSettings.viewport.height) * 100}%`,
++								left: `${(Number.parseInt(mousePosition.split(",")[0]) / browserSettings.viewport.width) * 100}%`,
+ 								transition: "top 0.3s ease-out, left 0.3s ease-out",
+ 							}}
+ 						/>
+@@ -479,7 +480,7 @@ const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
+ 	// Height change effect
+ 	useEffect(() => {
+ 		const isInitialRender = prevHeightRef.current === 0
+-		if (isLast && height !== 0 && height !== Infinity && height !== prevHeightRef.current) {
++		if (isLast && height !== 0 && height !== Number.POSITIVE_INFINITY && height !== prevHeightRef.current) {
+ 			if (!isInitialRender) {
+ 				onHeightChange(height > prevHeightRef.current)
+ 			}
+diff --git a/webview-ui/src/components/chat/ChatRow.tsx b/webview-ui/src/components/chat/ChatRow.tsx
+index bd380c006..c378062b6 100644
+--- a/webview-ui/src/components/chat/ChatRow.tsx
++++ b/webview-ui/src/components/chat/ChatRow.tsx
+@@ -1,16 +1,16 @@
+ import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
+ import {
+-	ClineApiReqInfo,
+-	ClineAskQuestion,
+-	ClineAskUseMcpServer,
+-	ClineMessage,
+-	ClinePlanModeResponse,
+-	ClineSayGenerateExplanation,
+-	ClineSayTool,
++	type ClineApiReqInfo,
++	type ClineAskQuestion,
++	type ClineAskUseMcpServer,
++	type ClineMessage,
++	type ClinePlanModeResponse,
++	type ClineSayGenerateExplanation,
++	type ClineSayTool,
+ 	COMPLETION_RESULT_CHANGES_FLAG,
+ } from "@shared/ExtensionMessage"
+ import { BooleanRequest, StringRequest } from "@shared/proto/cline/common"
+-import { Mode } from "@shared/storage/types"
++import type { Mode } from "@shared/storage/types"
+ import deepEqual from "fast-deep-equal"
+ import {
+ 	ArrowRightIcon,
+@@ -36,7 +36,7 @@ import {
+ 	TerminalIcon,
+ 	TriangleAlertIcon,
+ } from "lucide-react"
+-import { MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
++import { type MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+ import { useSize } from "react-use"
+ import { OptionsButtons } from "@/components/chat/OptionsButtons"
+ import { CheckmarkControl } from "@/components/common/CheckmarkControl"
+@@ -320,12 +320,12 @@ export const ChatRowContent = memo(
+ 				case "mistake_limit_reached":
+ 					return [
+ 						<CircleXIcon className="text-error size-2" />,
+-						<span className="text-error font-bold">Cline is having trouble...</span>,
++						<span className="text-error font-bold">Resonance is having trouble...</span>,
+ 					]
+ 				case "command":
+ 					return [
+ 						<TerminalIcon className="text-foreground size-2" />,
+-						<span className="font-bold text-foreground">Cline wants to execute this command:</span>,
++						<span className="font-bold text-foreground">Resonance wants to execute this command:</span>,
+ 					]
+ 				case "use_mcp_server":
+ 					const mcpServerUse = JSON.parse(message.text || "{}") as ClineAskUseMcpServer
+@@ -336,7 +336,7 @@ export const ChatRowContent = memo(
+ 							<span className="codicon codicon-server text-foreground mb-[-1.5px]" />
+ 						),
+ 						<span className="ph-no-capture font-bold text-foreground break-words">
+-							Cline wants to {mcpServerUse.type === "use_mcp_tool" ? "use a tool" : "access a resource"} on the{" "}
++							Resonance wants to {mcpServerUse.type === "use_mcp_tool" ? "use a tool" : "access a resource"} on the{" "}
+ 							<code className="break-all">
+ 								{getMcpServerDisplayName(mcpServerUse.serverName, mcpMarketplaceCatalog)}
+ 							</code>{" "}
+@@ -355,7 +355,7 @@ export const ChatRowContent = memo(
+ 				case "followup":
+ 					return [
+ 						<span className="codicon codicon-question text-foreground mb-[-1.5px]" />,
+-						<span className="font-bold text-foreground">Cline has a question:</span>,
++						<span className="font-bold text-foreground">Resonance has a question:</span>,
+ 					]
+ 				default:
+ 					return [null, null]
+@@ -433,8 +433,8 @@ export const ChatRowContent = memo(
+ 					const content = tool?.content || ""
+ 					const isApplyingPatch = content?.startsWith("%%bash") && !content.endsWith("*** End Patch\nEOF")
+ 					const editToolTitle = isApplyingPatch
+-						? "Cline is creating patches to edit this file:"
+-						: "Cline wants to edit this file:"
++						? "Resonance is creating patches to edit this file:"
++						: "Resonance wants to edit this file:"
+ 					return (
+ 						<div>
+ 							<div className={HEADER_CLASSNAMES}>
+@@ -468,7 +468,7 @@ export const ChatRowContent = memo(
+ 								<SquareMinusIcon className="size-2" />
+ 								{tool.operationIsLocatedInWorkspace === false &&
+ 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
+-								<span style={{ fontWeight: "bold" }}>Cline wants to delete this file:</span>
++								<span style={{ fontWeight: "bold" }}>Resonance wants to delete this file:</span>
+ 							</div>
+ 							<CodeAccordian
+ 								// isLoading={message.partial}
+@@ -486,7 +486,7 @@ export const ChatRowContent = memo(
+ 								<FilePlus2Icon className="size-2" />
+ 								{tool.operationIsLocatedInWorkspace === false &&
+ 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
+-								<span className="font-bold">Cline wants to create a new file:</span>
++								<span className="font-bold">Resonance wants to create a new file:</span>
+ 							</div>
+ 							{backgroundEditEnabled && tool.path && tool.content ? (
+ 								<DiffEditRow patch={tool.content} path={tool.path} startLineNumbers={tool.startLineNumbers} />
+@@ -509,7 +509,7 @@ export const ChatRowContent = memo(
+ 								{isImage ? <ImageUpIcon className="size-2" /> : <FileCode2Icon className="size-2" />}
+ 								{tool.operationIsLocatedInWorkspace === false &&
+ 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
+-								<span className="font-bold">Cline wants to read this file:</span>
++								<span className="font-bold">Resonance wants to read this file:</span>
+ 							</div>
+ 							<div className="bg-code rounded-sm overflow-hidden border border-editor-group-border">
+ 								<div
+@@ -549,8 +549,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
+ 								<span style={{ fontWeight: "bold" }}>
+ 									{message.type === "ask"
+-										? "Cline wants to view the top level files in this directory:"
+-										: "Cline viewed the top level files in this directory:"}
++										? "Resonance wants to view the top level files in this directory:"
++										: "Resonance viewed the top level files in this directory:"}
+ 								</span>
+ 							</div>
+ 							<CodeAccordian
+@@ -571,8 +571,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
+ 								<span style={{ fontWeight: "bold" }}>
+ 									{message.type === "ask"
+-										? "Cline wants to recursively view all files in this directory:"
+-										: "Cline recursively viewed all files in this directory:"}
++										? "Resonance wants to recursively view all files in this directory:"
++										: "Resonance recursively viewed all files in this directory:"}
+ 								</span>
+ 							</div>
+ 							<CodeAccordian
+@@ -593,8 +593,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
+ 								<span style={{ fontWeight: "bold" }}>
+ 									{message.type === "ask"
+-										? "Cline wants to view source code definition names used in this directory:"
+-										: "Cline viewed source code definition names used in this directory:"}
++										? "Resonance wants to view source code definition names used in this directory:"
++										: "Resonance viewed source code definition names used in this directory:"}
+ 								</span>
+ 							</div>
+ 							<CodeAccordian
+@@ -613,7 +613,7 @@ export const ChatRowContent = memo(
+ 								{tool.operationIsLocatedInWorkspace === false &&
+ 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
+ 								<span className="font-bold">
+-									Cline wants to search this directory for <code className="break-all">{tool.regex}</code>:
++									Resonance wants to search this directory for <code className="break-all">{tool.regex}</code>:
+ 								</span>
+ 							</div>
+ 							<SearchResultsDisplay
+@@ -630,7 +630,7 @@ export const ChatRowContent = memo(
+ 						<div>
+ 							<div className={HEADER_CLASSNAMES}>
+ 								<FoldVerticalIcon className="size-2" />
+-								<span className="font-bold">Cline is condensing the conversation:</span>
++								<span className="font-bold">Resonance is condensing the conversation:</span>
+ 							</div>
+ 							<div className="bg-code overflow-hidden border border-editor-group-border rounded-[3px]">
+ 								<div
+@@ -675,8 +675,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This URL is external")}
+ 								<span className="font-bold">
+ 									{message.type === "ask"
+-										? "Cline wants to fetch content from this URL:"
+-										: "Cline fetched content from this URL:"}
++										? "Resonance wants to fetch content from this URL:"
++										: "Resonance fetched content from this URL:"}
+ 								</span>
+ 							</div>
+ 							<div
+@@ -704,8 +704,8 @@ export const ChatRowContent = memo(
+ 									toolIcon("sign-out", "yellow", -90, "This search is external")}
+ 								<span className="font-bold">
+ 									{message.type === "ask"
+-										? "Cline wants to search the web for:"
+-										: "Cline searched the web for:"}
++										? "Resonance wants to search the web for:"
++										: "Resonance searched the web for:"}
+ 								</span>
+ 							</div>
+ 							<div className="bg-code border border-editor-group-border overflow-hidden rounded-xs select-text py-[9px] px-2.5">
+@@ -720,7 +720,7 @@ export const ChatRowContent = memo(
+ 						<div>
+ 							<div className={HEADER_CLASSNAMES}>
+ 								<LightbulbIcon className="size-2" />
+-								<span className="font-bold">Cline loaded the skill:</span>
++								<span className="font-bold">Resonance loaded the skill:</span>
+ 							</div>
+ 							<div className="bg-code border border-editor-group-border overflow-hidden rounded-xs py-[9px] px-2.5">
+ 								<span className="ph-no-capture font-medium">{tool.path}</span>
+@@ -1045,7 +1045,7 @@ export const ChatRowContent = memo(
+ 									<span className="font-medium text-foreground">Shell Integration Unavailable</span>
+ 								</div>
+ 								<div className="text-foreground opacity-80">
+-									Cline may have trouble viewing the command's output. Please update VSCode (
++									Resonance may have trouble viewing the command's output. Please update the IDE (
+ 									<code>CMD/CTRL + Shift + P</code> → "Update") and make sure you're using a supported shell:
+ 									zsh, bash, fish, or PowerShell (<code>CMD/CTRL + Shift + P</code> → "Terminal: Select Default
+ 									Profile").
+@@ -1244,7 +1244,7 @@ export const ChatRowContent = memo(
+ 							<div>
+ 								<div className={HEADER_CLASSNAMES}>
+ 									<FilePlus2Icon className="size-2" />
+-									<span className="text-foreground font-bold">Cline wants to start a new task:</span>
++									<span className="text-foreground font-bold">Resonance wants to start a new task:</span>
+ 								</div>
+ 								<NewTaskPreview context={message.text || ""} />
+ 							</div>
+@@ -1254,7 +1254,9 @@ export const ChatRowContent = memo(
+ 							<div>
+ 								<div className={HEADER_CLASSNAMES}>
+ 									<FilePlus2Icon className="size-2" />
+-									<span className="text-foreground font-bold">Cline wants to condense your conversation:</span>
++									<span className="text-foreground font-bold">
++										Resonance wants to condense your conversation:
++									</span>
+ 								</div>
+ 								<NewTaskPreview context={message.text || ""} />
+ 							</div>
+@@ -1264,7 +1266,7 @@ export const ChatRowContent = memo(
+ 							<div>
+ 								<div className={HEADER_CLASSNAMES}>
+ 									<FilePlus2Icon className="size-2" />
+-									<span className="text-foreground font-bold">Cline wants to create a Github issue:</span>
++									<span className="text-foreground font-bold">Resonance wants to create a Github issue:</span>
+ 								</div>
+ 								<ReportBugPreview data={message.text || ""} />
+ 							</div>
+diff --git a/webview-ui/src/components/chat/ErrorRow.tsx b/webview-ui/src/components/chat/ErrorRow.tsx
+index 9550a5c5b..c15ec82d7 100644
+--- a/webview-ui/src/components/chat/ErrorRow.tsx
++++ b/webview-ui/src/components/chat/ErrorRow.tsx
+@@ -1,4 +1,4 @@
+-import { ClineMessage } from "@shared/ExtensionMessage"
++import type { ClineMessage } from "@shared/ExtensionMessage"
+ import { memo } from "react"
+ import CreditLimitError from "@/components/chat/CreditLimitError"
+ import SpendLimitError from "@/components/chat/SpendLimitError"
+@@ -121,8 +121,21 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
+ 							{/* Display raw API error if different from parsed error message */}
+ 							{errorMessage !== rawApiError && <div>{rawApiError}</div>}
+ 
+-							<div className="mt-4">
+-								<span className="text-description">(Click "Retry" below)</span>
++							{/* Display Login button for non-logged in users using the Cline provider */}
++							<div>
++								{/* The user is signed in or not using cline provider */}
++								{isClineProvider && !clineUser ? (
++									<Button className="w-full mb-4" disabled={isLoginLoading} onClick={handleSignIn}>
++										Sign in to Resonance
++										{isLoginLoading && (
++											<span className="ml-1 animate-spin">
++												<span className="codicon codicon-refresh" />
++											</span>
++										)}
++									</Button>
++								) : (
++									<span className="mb-4 text-description">(Click "Retry" below)</span>
++								)}
+ 							</div>
+ 						</p>
+ 					)
+@@ -142,7 +155,8 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
+ 				return (
+ 					<div className="flex flex-col p-2 rounded text-xs opacity-80 bg-quote text-foreground">
+ 						<div>
+-							Cline tried to access <code>{message.text}</code> which is blocked by the <code>.clineignore</code>
++							Resonance tried to access <code>{message.text}</code> which is blocked by the{" "}
++							<code>.clineignore</code>
+ 							file.
+ 						</div>
+ 					</div>
+diff --git a/webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx b/webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx
+index fb9f2b3f3..7e851df98 100644
+--- a/webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx
++++ b/webview-ui/src/components/chat/chat-view/components/messages/ToolGroupRenderer.tsx
+@@ -1,4 +1,4 @@
+-import { ClineMessage, ClineSayTool } from "@shared/ExtensionMessage"
++import type { ClineMessage, ClineSayTool } from "@shared/ExtensionMessage"
+ import { StringRequest } from "@shared/proto/cline/common"
+ import { memo, useCallback, useMemo, useState } from "react"
+ import { TypewriterText } from "@/components/chat/TypewriterText"
+@@ -387,5 +387,5 @@ export function getToolGroupSummaryFromParsedTools(tools: ClineSayTool[]): strin
+ 		parts.push(`performed ${counts.search} search${counts.search > 1 ? "es" : ""}`)
+ 	}
+ 
+-	return parts.length === 0 ? "Context" : "Cline" + action + parts.join(", ")
++	return parts.length === 0 ? "Context" : "Resonance" + action + parts.join(", ")
+ }
+diff --git a/webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts b/webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts
+index 8380c02fb..a125c9dcf 100644
+--- a/webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts
++++ b/webview-ui/src/components/chat/chat-view/hooks/useMessageHandlers.ts
+@@ -41,7 +41,6 @@ export function useMessageHandlers(messages: ClineMessage[], chatState: ChatStat
+ 			}
+ 
+ 			if (hasContent) {
+-				console.log("[ChatView] handleSendMessage - Sending message:", messageToSend)
+ 				let messageSent = false
+ 
+ 				if (messages.length === 0) {
+diff --git a/webview-ui/src/components/common/TelemetryBanner.tsx b/webview-ui/src/components/common/TelemetryBanner.tsx
+index a9572014f..9580960e0 100644
+--- a/webview-ui/src/components/common/TelemetryBanner.tsx
++++ b/webview-ui/src/components/common/TelemetryBanner.tsx
+@@ -21,11 +21,11 @@ export const TelemetryBanner: React.FC = () => {
+ 
+ 	return (
+ 		<div className="bg-banner-background text-banner-foreground px-3 py-2 flex flex-col gap-1 shrink-0 mb-1 relative text-sm m-4">
+-			<h3 className="m-0">Help Improve Cline</h3>
++			<h3 className="m-0">Help Improve Resonance</h3>
+ 			<i>(and access experimental features)</i>
+ 			<p className="m-0">
+-				Cline collects error and usage data to help us fix bugs and improve the extension. No code, prompts, or personal
+-				information is ever sent.
++				Resonance collects error and usage data to help us fix bugs and improve the extension. No code, prompts, or
++				personal information is ever sent.
+ 			</p>
+ 			<p className="m-0">
+ 				<span>You can turn this setting off in </span>
+diff --git a/webview-ui/src/components/common/WhatsNewModal.tsx b/webview-ui/src/components/common/WhatsNewModal.tsx
+index bd55a891a..990dbdc07 100644
+--- a/webview-ui/src/components/common/WhatsNewModal.tsx
++++ b/webview-ui/src/components/common/WhatsNewModal.tsx
+@@ -1,15 +1,6 @@
+-import { BannerAction, BannerCardData } from "@shared/cline/banner"
+-import React, { useCallback } from "react"
+-import { useMount } from "react-use"
+-import DiscordIcon from "@/assets/DiscordIcon"
+-import GitHubIcon from "@/assets/GitHubIcon"
+-import LinkedInIcon from "@/assets/LinkedInIcon"
+-import RedditIcon from "@/assets/RedditIcon"
+-import XIcon from "@/assets/XIcon"
+-import WhatsNewItems from "@/components/common/WhatsNewItems"
++import type { BannerAction, BannerCardData } from "@shared/cline/banner"
++import type React from "react"
+ import { Dialog, DialogContent } from "@/components/ui/dialog"
+-import { useExtensionState } from "@/context/ExtensionStateContext"
+-import { useApiConfigurationHandlers } from "../settings/utils/useApiConfigurationHandlers"
+ 
+ interface WhatsNewModalProps {
+ 	open: boolean
+@@ -19,34 +10,7 @@ interface WhatsNewModalProps {
+ 	onBannerAction?: (action: BannerAction) => void
+ }
+ 
+-export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ open, onClose, version, welcomeBanners, onBannerAction }) => {
+-	const { openRouterModels, refreshOpenRouterModels, navigateToSettingsModelPicker } = useExtensionState()
+-	const { handleFieldsChange } = useApiConfigurationHandlers()
+-
+-	// Get latest model list in case user hits shortcut button to set model
+-	useMount(refreshOpenRouterModels)
+-
+-	const navigateToModelPicker = useCallback(
+-		(initialModelTab: "recommended" | "free", modelId?: string) => {
+-			// Switch to Cline provider first so the model picker tab works
+-			// Optionally also set the model if provided
+-			const updates: Record<string, any> = {
+-				planModeApiProvider: "cline",
+-				actModeApiProvider: "cline",
+-			}
+-			if (modelId) {
+-				updates.planModeOpenRouterModelId = modelId
+-				updates.actModeOpenRouterModelId = modelId
+-				updates.planModeOpenRouterModelInfo = openRouterModels[modelId]
+-				updates.actModeOpenRouterModelInfo = openRouterModels[modelId]
+-			}
+-			handleFieldsChange(updates)
+-			onClose()
+-			navigateToSettingsModelPicker({ targetSection: "api-config", initialModelTab })
+-		},
+-		[handleFieldsChange, navigateToSettingsModelPicker, onClose, openRouterModels],
+-	)
+-
++export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ open, onClose, version }) => {
+ 	const inlineCodeStyle: React.CSSProperties = {
+ 		backgroundColor: "var(--vscode-textCodeBlock-background)",
+ 		padding: "2px 6px",
+@@ -69,82 +33,21 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ open, onClose, ver
+ 						🎉 New in v{version}
+ 					</h2>
+ 
+-					<WhatsNewItems
+-						inlineCodeStyle={inlineCodeStyle}
+-						onBannerAction={onBannerAction}
+-						onClose={onClose}
+-						onNavigateToModelPicker={navigateToModelPicker}
+-						welcomeBanners={welcomeBanners}
+-					/>
+-
+-					{/* Social Icons Section */}
+-					<div className="flex flex-col items-center gap-3 mt-4 pt-4 border-t border-[var(--vscode-widget-border)]">
+-						{/* Icon Row */}
+-						<div className="flex items-center gap-4">
+-							{/* X/Twitter */}
+-							<a
+-								aria-label="Follow us on X"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://x.com/cline"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<XIcon />
+-							</a>
+-
+-							{/* Discord */}
+-							<a
+-								aria-label="Join our Discord"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://discord.gg/cline"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<DiscordIcon />
+-							</a>
+-
+-							{/* GitHub */}
+-							<a
+-								aria-label="Star us on GitHub"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://github.com/cline/cline"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<GitHubIcon />
+-							</a>
+-
+-							{/* Reddit */}
+-							<a
+-								aria-label="Join our subreddit"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://www.reddit.com/r/cline/"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<RedditIcon />
+-							</a>
+-
+-							{/* LinkedIn */}
+-							<a
+-								aria-label="Follow us on LinkedIn"
+-								className="text-[var(--vscode-foreground)] hover:text-[var(--vscode-textLink-activeForeground)] transition-colors"
+-								href="https://www.linkedin.com/company/clinebot/"
+-								rel="noopener noreferrer"
+-								target="_blank">
+-								<LinkedInIcon />
+-							</a>
+-						</div>
+-
+-						{/* GitHub Star CTA */}
+-						<p className="text-sm text-center" style={{ color: "var(--vscode-descriptionForeground)" }}>
+-							Please support Cline by{" "}
+-							<a
+-								href="https://github.com/cline/cline"
+-								rel="noopener noreferrer"
+-								style={{ color: "var(--vscode-textLink-foreground)" }}
+-								target="_blank">
+-								starring us on GitHub
+-							</a>
+-							.
+-						</p>
+-					</div>
++					{/* Description */}
++					<ul className="text-sm pl-3 list-disc" style={{ color: "var(--vscode-descriptionForeground)" }}>
++						<li className="mb-2">
++							<strong>Persistent Memory:</strong> Resonance maintains state across sessions via the{" "}
++							<code style={inlineCodeStyle}>.resonance/</code> directory.
++						</li>
++						<li className="mb-2">
++							<strong>Work Package Management:</strong> Organize tasks, track progress, and manage knowledge with
++							structured state files.
++						</li>
++						<li className="mb-2">
++							<strong>Session Continuity:</strong> Every session reads{" "}
++							<code style={inlineCodeStyle}>01_state.md</code> to pick up right where you left off.
++						</li>
++					</ul>
+ 				</div>
+ 			</DialogContent>
+ 		</Dialog>
+diff --git a/webview-ui/src/components/onboarding/data-steps.ts b/webview-ui/src/components/onboarding/data-steps.ts
+index 475cd93dc..5e1da3236 100644
+--- a/webview-ui/src/components/onboarding/data-steps.ts
++++ b/webview-ui/src/components/onboarding/data-steps.ts
+@@ -12,11 +12,11 @@ type UserTypeSelection = {
+ 
+ export const STEP_CONFIG = {
+ 	0: {
+-		title: "How will you use Cline?",
++		title: "How will you use Resonance?",
+ 		description: "Select an option below to get started.",
+ 		buttons: [
+ 			{ text: "Continue", action: "next", variant: "default" },
+-			{ text: "Login to Cline", action: "signin", variant: "secondary" },
++			{ text: "Login to Resonance", action: "signin", variant: "secondary" },
+ 		],
+ 	},
+ 	[NEW_USER_TYPE.FREE]: {
+@@ -50,5 +50,5 @@ export const STEP_CONFIG = {
+ export const USER_TYPE_SELECTIONS: UserTypeSelection[] = [
+ 	{ title: "Absolutely Free", description: "Get started at no cost", type: NEW_USER_TYPE.FREE },
+ 	{ title: "Frontier Model", description: "Claude 4.5, GPT-5 Codex, etc", type: NEW_USER_TYPE.POWER },
+-	{ title: "Bring my own API key", description: "Use Cline with your provider of choice", type: NEW_USER_TYPE.BYOK },
++	{ title: "Bring my own API key", description: "Use Resonance with your provider of choice", type: NEW_USER_TYPE.BYOK },
+ ]
+diff --git a/webview-ui/src/components/settings/ClineAccountInfoCard.tsx b/webview-ui/src/components/settings/ClineAccountInfoCard.tsx
+index 86fe88daf..9695c9f1d 100644
+--- a/webview-ui/src/components/settings/ClineAccountInfoCard.tsx
++++ b/webview-ui/src/components/settings/ClineAccountInfoCard.tsx
+@@ -34,10 +34,10 @@ export const ClineAccountInfoCard = () => {
+ 			) : (
+ 				<div>
+ 					<VSCodeButton className="mt-0" disabled={isLoading} onClick={handleLogin}>
+-						Sign Up with Cline
++						Sign Up with Resonance
+ 						{isLoading && (
+ 							<span className="ml-1 animate-spin">
+-								<span className="codicon codicon-refresh"></span>
++								<span className="codicon codicon-refresh" />
+ 							</span>
+ 						)}
+ 					</VSCodeButton>
+diff --git a/webview-ui/src/components/settings/SettingsView.tsx b/webview-ui/src/components/settings/SettingsView.tsx
+index 01de0452e..44b3412b1 100644
+--- a/webview-ui/src/components/settings/SettingsView.tsx
++++ b/webview-ui/src/components/settings/SettingsView.tsx
+@@ -93,7 +93,7 @@ export const SETTINGS_TABS: SettingsTab[] = [
+ 	{
+ 		id: "about",
+ 		name: "About",
+-		tooltipText: "About Cline",
++		tooltipText: "About Resonance",
+ 		headerText: "About",
+ 		icon: Info,
+ 	},
+diff --git a/webview-ui/src/components/settings/sections/AboutSection.tsx b/webview-ui/src/components/settings/sections/AboutSection.tsx
+index 6e84d53ea..43f1431e4 100644
+--- a/webview-ui/src/components/settings/sections/AboutSection.tsx
++++ b/webview-ui/src/components/settings/sections/AboutSection.tsx
+@@ -1,4 +1,3 @@
+-import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+ import Section from "../Section"
+ 
+ interface AboutSectionProps {
+@@ -11,39 +10,11 @@ const AboutSection = ({ version, renderSectionHeader }: AboutSectionProps) => {
+ 			{renderSectionHeader("about")}
+ 			<Section>
+ 				<div className="flex px-4 flex-col gap-2">
+-					<h2 className="text-lg font-semibold">Cline v{version}</h2>
++					<h2 className="text-lg font-semibold">Resonance v{version}</h2>
+ 					<p>
+-						An AI assistant that can use your CLI and Editor. Cline can handle complex software development tasks
+-						step-by-step with tools that let him create & edit files, explore large projects, use the browser, and
+-						execute terminal commands (after you grant permission).
+-					</p>
+-
+-					<h3 className="text-md font-semibold">Community & Support</h3>
+-					<p>
+-						<VSCodeLink href="https://x.com/cline">X</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://discord.gg/cline">Discord</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://www.reddit.com/r/cline/"> r/cline</VSCodeLink>
+-					</p>
+-
+-					<h3 className="text-md font-semibold">Development</h3>
+-					<p>
+-						<VSCodeLink href="https://github.com/cline/cline">GitHub</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://github.com/cline/cline/issues"> Issues</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://github.com/cline/cline/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop">
+-							{" "}
+-							Feature Requests
+-						</VSCodeLink>
+-					</p>
+-
+-					<h3 className="text-md font-semibold">Resources</h3>
+-					<p>
+-						<VSCodeLink href="https://docs.cline.bot/">Documentation</VSCodeLink>
+-						{" • "}
+-						<VSCodeLink href="https://cline.bot/">https://cline.bot</VSCodeLink>
++						A project management assistant with persistent memory. Resonance can handle complex software development
++						tasks step-by-step with tools that let him create & edit files, explore large projects, use the browser,
++						and execute terminal commands (after you grant permission).
+ 					</p>
+ 				</div>
+ 			</Section>
+diff --git a/webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx b/webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx
+index e38660a6e..1cb5c7e99 100644
+--- a/webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx
++++ b/webview-ui/src/components/settings/sections/GeneralSettingsSection.tsx
+@@ -42,8 +42,8 @@ const GeneralSettingsSection = ({ renderSectionHeader }: GeneralSettingsSectionP
+ 					</Tooltip>
+ 
+ 					<p className="text-sm mt-[5px] text-description">
+-						Help improve Cline by sending usage data and error reports. No code, prompts, or personal information are
+-						ever sent. See our{" "}
++						Help improve Resonance by sending usage data and error reports. No code, prompts, or personal information
++						are ever sent. See our{" "}
+ 						<VSCodeLink
+ 							className="text-inherit"
+ 							href="https://docs.cline.bot/more-info/telemetry"
+diff --git a/webview-ui/src/components/welcome/HomeHeader.tsx b/webview-ui/src/components/welcome/HomeHeader.tsx
+index d95bf543b..75f1dae95 100644
+--- a/webview-ui/src/components/welcome/HomeHeader.tsx
++++ b/webview-ui/src/components/welcome/HomeHeader.tsx
+@@ -1,49 +1,13 @@
+-import { EmptyRequest } from "@shared/proto/cline/common"
+-import ClineLogoSanta from "@/assets/ClineLogoSanta"
+-import ClineLogoTired from "@/assets/ClineLogoTired"
+-import ClineLogoVariable from "@/assets/ClineLogoVariable"
+-import { useExtensionState } from "@/context/ExtensionStateContext"
+-import { UiServiceClient } from "@/services/grpc-client"
+-
+ interface HomeHeaderProps {
+ 	shouldShowQuickWins?: boolean
+ }
+ 
+-const HomeHeader = ({ shouldShowQuickWins = false }: HomeHeaderProps) => {
+-	const { environment, lazyTeammateModeEnabled } = useExtensionState()
+-
+-	const handleTakeATour = async () => {
+-		try {
+-			await UiServiceClient.openWalkthrough(EmptyRequest.create())
+-		} catch (error) {
+-			console.error("Error opening walkthrough:", error)
+-		}
+-	}
+-
+-	// Lazy Teammate Mode takes priority, then December festive logo, then default
+-	const isDecember = new Date().getMonth() === 11 // 11 = December (0-indexed)
+-	const LogoComponent = lazyTeammateModeEnabled ? ClineLogoTired : isDecember ? ClineLogoSanta : ClineLogoVariable
+-	const headingText = lazyTeammateModeEnabled ? "I guess I'm here to help" : "What can I do for you?"
+-
++const HomeHeader = ({ shouldShowQuickWins: _shouldShowQuickWins = false }: HomeHeaderProps) => {
+ 	return (
+ 		<div className="flex flex-col items-center mb-5">
+-			<div className="my-7">
+-				<LogoComponent className="size-20" environment={environment} />
+-			</div>
+-			<div className="text-center flex items-center justify-center px-4">
+-				<h1 className="m-0 font-bold">{headingText}</h1>
++			<div className="text-center flex items-center justify-center px-4 mt-7">
++				<h1 className="m-0 font-bold">What can I do for you?</h1>
+ 			</div>
+-			{shouldShowQuickWins && (
+-				<div className="mt-4">
+-					<button
+-						className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-panel bg-white/2 hover:bg-list-background-hover transition-colors duration-150 ease-in-out text-code-foreground text-sm font-medium cursor-pointer"
+-						onClick={handleTakeATour}
+-						type="button">
+-						Take a Tour
+-						<span className="codicon codicon-play scale-90" />
+-					</button>
+-				</div>
+-			)}
+ 		</div>
+ 	)
+ }
+diff --git a/webview-ui/src/components/welcome/SuggestedTasks.tsx b/webview-ui/src/components/welcome/SuggestedTasks.tsx
+index 02eea58c7..e214cf549 100644
+--- a/webview-ui/src/components/welcome/SuggestedTasks.tsx
++++ b/webview-ui/src/components/welcome/SuggestedTasks.tsx
+@@ -1,8 +1,8 @@
+ import { NewTaskRequest } from "@shared/proto/cline/task"
+-import React from "react"
++import type React from "react"
+ import { TaskServiceClient } from "@/services/grpc-client"
+ import QuickWinCard from "./QuickWinCard"
+-import { QuickWinTask, quickWinTasks } from "./quickWinTasks"
++import { type QuickWinTask, quickWinTasks } from "./quickWinTasks"
+ 
+ export const SuggestedTasks: React.FC<{ shouldShowQuickWins: boolean }> = ({ shouldShowQuickWins }) => {
+ 	const handleExecuteQuickWin = async (prompt: string) => {
+@@ -14,7 +14,7 @@ export const SuggestedTasks: React.FC<{ shouldShowQuickWins: boolean }> = ({ sho
+ 			<div className="px-4 pt-1 pb-3 select-none">
+ 				{" "}
+ 				<h2 className="text-sm font-medium mb-2.5 text-center text-gray">
+-					Quick <span className="text-white">[Wins]</span> with Cline
++					Quick <span className="text-white">[Wins]</span> with Resonance
+ 				</h2>
+ 				<div className="flex flex-col space-y-1">
+ 					{" "}
+diff --git a/webview-ui/src/components/welcome/WelcomeView.tsx b/webview-ui/src/components/welcome/WelcomeView.tsx
+index 276f489bb..8f04d4c77 100644
+--- a/webview-ui/src/components/welcome/WelcomeView.tsx
++++ b/webview-ui/src/components/welcome/WelcomeView.tsx
+@@ -1,7 +1,6 @@
+ import { BooleanRequest, EmptyRequest } from "@shared/proto/cline/common"
+-import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
++import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+ import { memo, useEffect, useState } from "react"
+-import ClineLogoWhite from "@/assets/ClineLogoWhite"
+ import ApiOptions from "@/components/settings/ApiOptions"
+ import { useExtensionState } from "@/context/ExtensionStateContext"
+ import { AccountServiceClient, StateServiceClient } from "@/services/grpc-client"
+@@ -39,18 +38,10 @@ const WelcomeView = memo(() => {
+ 	return (
+ 		<div className="fixed inset-0 p-0 flex flex-col">
+ 			<div className="h-full px-5 overflow-auto flex flex-col gap-2.5">
+-				<h2 className="text-lg font-semibold">Hi, I'm Cline</h2>
+-				<div className="flex justify-center my-5">
+-					<ClineLogoWhite className="size-16" />
+-				</div>
++				<h2 className="text-lg font-semibold">Hi, I'm Resonance</h2>
+ 				<p>
+-					I can do all kinds of tasks thanks to breakthroughs in{" "}
+-					<VSCodeLink className="inline" href="https://www.anthropic.com/claude/sonnet">
+-						Claude 4.6 Sonnet's
+-					</VSCodeLink>
+-					agentic coding capabilities and access to tools that let me create & edit files, explore complex projects, use
+-					a browser, and execute terminal commands <i>(with your permission, of course)</i>. I can even use MCP to
+-					create new tools and extend my own capabilities.
++					I'm your project management assistant with persistent memory. I help organize work, track progress across
++					sessions, and manage knowledge — all while maintaining state in the <code>.resonance/</code> directory.
+ 				</p>
+ 
+ 				<p className="text-(--vscode-descriptionForeground)">
+-- 
+2.50.1
+

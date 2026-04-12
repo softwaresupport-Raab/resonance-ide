@@ -1,0 +1,1644 @@
+From 4b297fed03279b1c5431d42354ece5c8ef77d364 Mon Sep 17 00:00:00 2001
+From: jmat <jens.mattke@raab.de>
+Date: Sun, 12 Apr 2026 14:21:08 +0200
+Subject: [PATCH 4/6] 004-ui-customization: Compact header, context ring,
+ auto-approve in settings
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Compact single-row task header (no accordion)
+- Circular context window ring with hover details
+- Hidden Plan/Act toggle in footer
+- Simplified navbar (New Task, History, Settings only)
+- Auto-approve controls moved from footer to Settings → Features
+- Hidden cost bubbles in history
+- Thinking indicator in messages area
+- Scroll behavior fixes
+- Theme CSS additions
+---
+ cli/src/components/ChatView.test.tsx          |   6 +-
+ cli/src/components/ChatView.tsx               |  25 ---
+ cli/src/components/SettingsPanelContent.tsx   |  23 +-
+ src/core/controller/index.ts                  |   2 +
+ .../src/components/chat/ChatTextArea.tsx      |  69 +-----
+ webview-ui/src/components/chat/ChatView.tsx   |  13 +-
+ .../components/layout/InputSection.tsx        |   9 +-
+ .../chat/chat-view/hooks/useScrollBehavior.ts |  39 ++--
+ .../chat/task-header/ContextWindow.tsx        | 113 +++-------
+ .../chat/task-header/ContextWindowRing.tsx    |  47 +++++
+ .../chat/task-header/ContextWindowSummary.tsx | 177 +++-------------
+ .../chat/task-header/TaskHeader.stories.tsx   |  32 +--
+ .../chat/task-header/TaskHeader.tsx           | 198 +++---------------
+ .../task-header/buttons/NewTaskButton.tsx     |   8 +-
+ .../src/components/history/HistoryPreview.tsx |   6 +-
+ .../components/history/HistoryViewItem.tsx    |   3 +-
+ webview-ui/src/components/menu/Navbar.tsx     |  28 +--
+ .../sections/FeatureSettingsSection.tsx       |  92 +++++++-
+ webview-ui/src/theme.css                      |  44 ++++
+ 19 files changed, 364 insertions(+), 570 deletions(-)
+ create mode 100644 webview-ui/src/components/chat/task-header/ContextWindowRing.tsx
+
+diff --git a/cli/src/components/ChatView.test.tsx b/cli/src/components/ChatView.test.tsx
+index c8d180404..08b5c7b12 100644
+--- a/cli/src/components/ChatView.test.tsx
++++ b/cli/src/components/ChatView.test.tsx
+@@ -301,8 +301,8 @@ describe("ChatView UI State During Exit", () => {
+ 		const onExit = createExitMock()
+ 		const { lastFrame } = render(<ChatView onExit={onExit} />)
+ 
+-		// Footer contains auto-approve toggle
+-		expect(lastFrame()).toContain("Auto-approve")
++		// Footer contains help and mode context
++		expect(lastFrame()).toContain("@ for files")
+ 		expect(lastFrame()).toContain("What can I do for you?")
+ 		expect(lastFrame()).toContain("Input:")
+ 
+@@ -315,7 +315,7 @@ describe("ChatView UI State During Exit", () => {
+ 		// Static content should still be present
+ 		expect(frameAfter).toContain("What can I do for you?")
+ 		// Footer should still be present (only input is hidden)
+-		expect(frameAfter).toContain("Auto-approve")
++		expect(frameAfter).toContain("@ for files")
+ 		// Input should be hidden
+ 		expect(frameAfter).not.toContain("Input:")
+ 	})
+diff --git a/cli/src/components/ChatView.tsx b/cli/src/components/ChatView.tsx
+index 47f62678f..6f136a8dc 100644
+--- a/cli/src/components/ChatView.tsx
++++ b/cli/src/components/ChatView.tsx
+@@ -483,9 +483,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
+ 	})
+ 
+ 	const [yolo, _setYolo] = useState<boolean>(() => StateManager.get().getGlobalSettingsKey("yoloModeToggled") ?? false)
+-	const [autoApproveAll, setAutoApproveAll] = useState<boolean>(
+-		() => StateManager.get().getGlobalSettingsKey("autoApproveAllToggled") ?? false,
+-	)
+ 
+ 	// Sync mode from core state updates (e.g. yolo auto-switching plan to act)
+ 	useEffect(() => {
+@@ -494,12 +491,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
+ 		}
+ 	}, [taskState.mode])
+ 
+-	const toggleAutoApproveAll = useCallback(() => {
+-		const newValue = !autoApproveAll
+-		setAutoApproveAll(newValue)
+-		StateManager.get().setGlobalState("autoApproveAllToggled", newValue)
+-	}, [autoApproveAll])
+-
+ 	// Get provider based on current mode (computed first since modelId depends on it)
+ 	const provider = useMemo(() => {
+ 		const stateManager = StateManager.get()
+@@ -1416,10 +1407,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
+ 		}
+ 
+ 		// 12. Normal input handling
+-		if (key.shift && key.tab) {
+-			toggleAutoApproveAll()
+-			return
+-		}
+ 		if (key.tab && !mentionInfo.inMentionMode && !slashInfo.inSlashMode) {
+ 			toggleMode()
+ 			return
+@@ -1685,18 +1672,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
+ 								)}
+ 							</Text>
+ 						</Box>
+-
+-						{/* Row 4: Auto-approve toggle */}
+-						<Box paddingLeft={1} paddingRight={1}>
+-							{autoApproveAll ? (
+-								<Text>
+-									<Text color="green">⏵⏵ Auto-approve all enabled</Text>
+-									<Text color="gray"> (Shift+Tab)</Text>
+-								</Text>
+-							) : (
+-								<Text color="gray">Auto-approve all disabled (Shift+Tab)</Text>
+-							)}
+-						</Box>
+ 					</Box>
+ 				)}
+ 			</Box>
+diff --git a/cli/src/components/SettingsPanelContent.tsx b/cli/src/components/SettingsPanelContent.tsx
+index f552ee0ba..6dc0ea8da 100644
+--- a/cli/src/components/SettingsPanelContent.tsx
++++ b/cli/src/components/SettingsPanelContent.tsx
+@@ -18,7 +18,7 @@ import { refreshOcaModels } from "@/core/controller/models/refreshOcaModels"
+ import { StateManager } from "@/core/storage/StateManager"
+ import { openAiCodexOAuthManager } from "@/integrations/openai-codex/oauth"
+ import { ClineAccountService } from "@/services/account/ClineAccountService"
+-import { AuthService, ClineAccountOrganization } from "@/services/auth/AuthService"
++import { AuthService, type ClineAccountOrganization } from "@/services/auth/AuthService"
+ import { StringRequest } from "@/shared/proto/cline/common"
+ import { openExternal } from "@/utils/env"
+ import { supportsReasoningEffortForModel } from "@/utils/model-utils"
+@@ -43,7 +43,7 @@ import { LanguagePicker } from "./LanguagePicker"
+ import { CUSTOM_MODEL_ID, hasModelPicker, ModelPicker } from "./ModelPicker"
+ import { OcaEmployeeCheck } from "./OcaEmployeeCheck"
+ import { OrganizationPicker } from "./OrganizationPicker"
+-import { Panel, PanelTab } from "./Panel"
++import { Panel, type PanelTab } from "./Panel"
+ import { getProviderLabel, ProviderPicker } from "./ProviderPicker"
+ 
+ interface SettingsPanelContentProps {
+@@ -218,6 +218,9 @@ export const SettingsPanelContent: React.FC<SettingsPanelContentProps> = ({
+ 	const [autoApproveSettings, setAutoApproveSettings] = useState<AutoApprovalSettings>(() => {
+ 		return stateManager.getGlobalSettingsKey("autoApprovalSettings") ?? DEFAULT_AUTO_APPROVAL_SETTINGS
+ 	})
++	const [autoApproveAll, setAutoApproveAll] = useState<boolean>(
++		() => stateManager.getGlobalSettingsKey("autoApproveAllToggled") ?? false,
++	)
+ 
+ 	// Other tab state
+ 	const [preferredLanguage, setPreferredLanguage] = useState<string>(
+@@ -563,6 +566,15 @@ export const SettingsPanelContent: React.FC<SettingsPanelContentProps> = ({
+ 				const result: ListItem[] = []
+ 				const actions = autoApproveSettings.actions
+ 
++				result.push({
++					key: "autoApproveAllToggled",
++					label: "Auto-approve everything",
++					type: "checkbox",
++					value: autoApproveAll,
++					description: "Bypass all approval prompts for tools and actions",
++				})
++				result.push({ key: "separator-all", label: "", type: "separator", value: false })
++
+ 				// Helper to add parent/child checkbox pairs
+ 				const addActionPair = (
+ 					parentKey: string,
+@@ -715,6 +727,7 @@ export const SettingsPanelContent: React.FC<SettingsPanelContentProps> = ({
+ 		actReasoningEffort,
+ 		planReasoningEffort,
+ 		autoApproveSettings,
++		autoApproveAll,
+ 		features,
+ 		preferredLanguage,
+ 		telemetry,
+@@ -910,6 +923,12 @@ export const SettingsPanelContent: React.FC<SettingsPanelContentProps> = ({
+ 		}
+ 
+ 		// Auto-approve actions
++		if (item.key === "autoApproveAllToggled") {
++			setAutoApproveAll(newValue)
++			stateManager.setGlobalState("autoApproveAllToggled", newValue)
++			return
++		}
++
+ 		if (item.key === "enableNotifications") {
+ 			const newSettings = {
+ 				...autoApproveSettings,
+diff --git a/src/core/controller/index.ts b/src/core/controller/index.ts
+index dbc138d93..3aa1ba7fb 100644
+--- a/src/core/controller/index.ts
++++ b/src/core/controller/index.ts
+@@ -855,6 +855,7 @@ export class Controller {
+ 		const mode = this.stateManager.getGlobalSettingsKey("mode")
+ 		const strictPlanModeEnabled = this.stateManager.getGlobalSettingsKey("strictPlanModeEnabled")
+ 		const yoloModeToggled = this.stateManager.getGlobalSettingsKey("yoloModeToggled")
++		const autoApproveAllToggled = this.stateManager.getGlobalSettingsKey("autoApproveAllToggled")
+ 		const useAutoCondense = this.stateManager.getGlobalSettingsKey("useAutoCondense")
+ 		const subagentsEnabled = this.stateManager.getGlobalSettingsKey("subagentsEnabled")
+ 		const userInfo = this.stateManager.getGlobalStateKey("userInfo")
+@@ -934,6 +935,7 @@ export class Controller {
+ 			mode,
+ 			strictPlanModeEnabled,
+ 			yoloModeToggled,
++			autoApproveAllToggled,
+ 			useAutoCondense,
+ 			subagentsEnabled,
+ 			userInfo,
+diff --git a/webview-ui/src/components/chat/ChatTextArea.tsx b/webview-ui/src/components/chat/ChatTextArea.tsx
+index 5f9fb882c..9f3008eeb 100644
+--- a/webview-ui/src/components/chat/ChatTextArea.tsx
++++ b/webview-ui/src/components/chat/ChatTextArea.tsx
+@@ -2,8 +2,7 @@ import { mentionRegex, mentionRegexGlobal } from "@shared/context-mentions"
+ import { StringRequest } from "@shared/proto/cline/common"
+ import { FileSearchRequest, FileSearchType, RelativePathsRequest } from "@shared/proto/cline/file"
+ import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/cline/state"
+-import { type SlashCommand } from "@shared/slashCommands"
+-import { Mode } from "@shared/storage/types"
++import type { SlashCommand } from "@shared/slashCommands"
+ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+ import { AtSignIcon, PlusIcon } from "lucide-react"
+ import type React from "react"
+@@ -92,33 +91,6 @@ interface GitCommit {
+ }
+ 
+ const PLAN_MODE_COLOR = "var(--vscode-activityWarningBadge-background)"
+-const ACT_MODE_COLOR = "var(--vscode-focusBorder)"
+-
+-const SwitchContainer = styled.div<{ disabled: boolean }>`
+-	display: flex;
+-	align-items: center;
+-	background-color: transparent;
+-	border: 1px solid var(--vscode-input-border);
+-	border-radius: 12px;
+-	overflow: hidden;
+-	cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
+-	opacity: ${(props) => (props.disabled ? 0.5 : 1)};
+-	transform: scale(1);
+-	transform-origin: right center;
+-	margin-left: 0;
+-	user-select: none; // Prevent text selection
+-`
+-
+-const Slider = styled.div.withConfig({
+-	shouldForwardProp: (prop) => !["isAct", "isPlan"].includes(prop),
+-})<{ isAct: boolean; isPlan?: boolean }>`
+-	position: absolute;
+-	height: 100%;
+-	width: 50%;
+-	background-color: ${(props) => (props.isPlan ? PLAN_MODE_COLOR : ACT_MODE_COLOR)};
+-	transition: transform 0.2s ease;
+-	transform: translateX(${(props) => (props.isAct ? "100%" : "0%")});
+-`
+ 
+ const ButtonGroup = styled.div`
+ 	display: flex;
+@@ -247,7 +219,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 		const [intendedCursorPosition, setIntendedCursorPosition] = useState<number | null>(null)
+ 		const contextMenuContainerRef = useRef<HTMLDivElement>(null)
+ 
+-		const [shownTooltipMode, setShownTooltipMode] = useState<Mode | null>(null)
+ 		const [pendingInsertions, setPendingInsertions] = useState<string[]>([])
+ 		const _shiftHoldTimerRef = useRef<NodeJS.Timeout | null>(null)
+ 		const [showUnsupportedFileError, setShowUnsupportedFileError] = useState(false)
+@@ -257,7 +228,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 
+ 		const [fileSearchResults, setFileSearchResults] = useState<SearchResult[]>([])
+ 		const [searchLoading, setSearchLoading] = useState(false)
+-		const [, metaKeyChar] = useMetaKeyDetection(platform)
++		useMetaKeyDetection(platform)
+ 
+ 		// Fetch git commits when Git is selected or when typing a hash
+ 		useEffect(() => {
+@@ -1337,11 +1308,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 				),
+ 			)
+ 		}
+-		// Replace Meta with the platform specific key and uppercase the command letter.
+-		const togglePlanActKeys = usePlatform()
+-			.togglePlanActKeys.replace("Meta", metaKeyChar)
+-			.replace(/.$/, (match) => match.toUpperCase())
+-
+ 		return (
+ 			<div>
+ 				<div
+@@ -1589,36 +1555,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
+ 							</ModelContainer>
+ 						</ButtonGroup>
+ 					</div>
+-					{/* Tooltip for Plan/Act toggle remains outside the conditional rendering */}
+-					<Tooltip>
+-						<TooltipContent
+-							className="text-xs px-2 flex flex-col gap-1"
+-							hidden={shownTooltipMode === null}
+-							side="top">
+-							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Cline will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
+-							<p className="text-description/80 text-xs mb-0">
+-								Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
+-							</p>
+-						</TooltipContent>
+-						<TooltipTrigger>
+-							<SwitchContainer data-testid="mode-switch" disabled={false} onClick={onModeToggle}>
+-								<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
+-								{["Plan", "Act"].map((m) => (
+-									<div
+-										aria-checked={mode === m.toLowerCase()}
+-										className={cn(
+-											"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
+-											mode === m.toLowerCase() ? "text-white" : "text-input-foreground",
+-										)}
+-										onMouseLeave={() => setShownTooltipMode(null)}
+-										onMouseOver={() => setShownTooltipMode(m.toLowerCase() === "plan" ? "plan" : "act")}
+-										role="switch">
+-										{m}
+-									</div>
+-								))}
+-							</SwitchContainer>
+-						</TooltipTrigger>
+-					</Tooltip>
++					{/* Plan/Act switch intentionally hidden from footer UI */}
+ 				</div>
+ 			</div>
+ 		)
+diff --git a/webview-ui/src/components/chat/ChatView.tsx b/webview-ui/src/components/chat/ChatView.tsx
+index 17a37d206..9f3934b3f 100644
+--- a/webview-ui/src/components/chat/ChatView.tsx
++++ b/webview-ui/src/components/chat/ChatView.tsx
+@@ -11,7 +11,6 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
+ import { useShowNavbar } from "@/context/PlatformContext"
+ import { FileServiceClient, UiServiceClient } from "@/services/grpc-client"
+ import { Navbar } from "../menu/Navbar"
+-import AutoApproveBar from "./auto-approve-menu/AutoApproveBar"
+ // Import utilities and hooks from the new structure
+ import {
+ 	ActionButtons,
+@@ -69,6 +68,16 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
+ 	// has to be after api_req_finished are all reduced into api_req_started messages
+ 	const apiMetrics = useMemo(() => getApiMetrics(modifiedMessages), [modifiedMessages])
+ 
++	// True during the pre-token gap: from user send until api_req_started arrives.
++	// Used to lock model/plan-act buttons so users can't change config mid-request.
++	const isWaitingForResponse = useMemo(() => {
++		const lastMsg = modifiedMessages[modifiedMessages.length - 1]
++		// New/empty chats should stay interactive until the user sends the first message.
++		if (!lastMsg) return false
++		if (lastMsg.say === "user_feedback" || lastMsg.say === "user_feedback_diff") return true
++		return false
++	}, [modifiedMessages])
++
+ 	const lastApiReqTotalTokens = useMemo(() => getLastApiReqTotalTokens(modifiedMessages) || undefined, [modifiedMessages])
+ 
+ 	// Use custom hooks for state management
+@@ -369,7 +378,6 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
+ 				)}
+ 			</div>
+ 			<footer className="bg-(--vscode-sidebar-background)" style={{ gridRow: "2" }}>
+-				<AutoApproveBar />
+ 				<ActionButtons
+ 					chatState={chatState}
+ 					messageHandlers={messageHandlers}
+@@ -385,6 +393,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
+ 				/>
+ 				<InputSection
+ 					chatState={chatState}
++					isProcessing={isWaitingForResponse}
+ 					messageHandlers={messageHandlers}
+ 					placeholderText={placeholderText}
+ 					scrollBehavior={scrollBehavior}
+diff --git a/webview-ui/src/components/chat/chat-view/components/layout/InputSection.tsx b/webview-ui/src/components/chat/chat-view/components/layout/InputSection.tsx
+index f3e5cc4d4..a284e894d 100644
+--- a/webview-ui/src/components/chat/chat-view/components/layout/InputSection.tsx
++++ b/webview-ui/src/components/chat/chat-view/components/layout/InputSection.tsx
+@@ -1,10 +1,11 @@
+-import React from "react"
++import type React from "react"
+ import ChatTextArea from "@/components/chat/ChatTextArea"
+ import QuotedMessagePreview from "@/components/chat/QuotedMessagePreview"
+-import { ChatState, MessageHandlers, ScrollBehavior } from "../../types/chatTypes"
++import type { ChatState, MessageHandlers, ScrollBehavior } from "../../types/chatTypes"
+ 
+ interface InputSectionProps {
+ 	chatState: ChatState
++	isProcessing: boolean
+ 	messageHandlers: MessageHandlers
+ 	scrollBehavior: ScrollBehavior
+ 	placeholderText: string
+@@ -17,6 +18,7 @@ interface InputSectionProps {
+  */
+ export const InputSection: React.FC<InputSectionProps> = ({
+ 	chatState,
++	isProcessing,
+ 	messageHandlers,
+ 	scrollBehavior,
+ 	placeholderText,
+@@ -29,7 +31,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
+ 		isTextAreaFocused,
+ 		inputValue,
+ 		setInputValue,
+-		sendingDisabled,
++		sendingDisabled: sendingDisabledFromState,
+ 		selectedImages,
+ 		setSelectedImages,
+ 		selectedFiles,
+@@ -38,6 +40,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
+ 		handleFocusChange,
+ 	} = chatState
+ 
++	const sendingDisabled = sendingDisabledFromState || isProcessing
+ 	const { isAtBottom, scrollToBottomAuto } = scrollBehavior
+ 
+ 	return (
+diff --git a/webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts b/webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts
+index 80468c5e2..1879f79e1 100644
+--- a/webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts
++++ b/webview-ui/src/components/chat/chat-view/hooks/useScrollBehavior.ts
+@@ -1,9 +1,9 @@
+-import { ClineMessage } from "@shared/ExtensionMessage"
++import type { ClineMessage } from "@shared/ExtensionMessage"
+ import debounce from "debounce"
+ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+ import { useEvent } from "react-use"
+-import { ListRange, VirtuosoHandle } from "react-virtuoso"
+-import { ScrollBehavior } from "../types/chatTypes"
++import type { ListRange, VirtuosoHandle } from "react-virtuoso"
++import type { ScrollBehavior } from "../types/chatTypes"
+ 
+ // Height of the sticky user message header (padding + content)
+ const STICKY_HEADER_HEIGHT = 32
+@@ -156,6 +156,24 @@ export function useScrollBehavior(
+ 		})
+ 	}, [])
+ 
++	// rAF-throttled instant scroll used during streaming height changes.
++	// Prevents competing smooth-scroll animations that cause visible jumping
++	// when providers like OpenAI stream tokens at high frequency.
++	const scrollRafRef = useRef<number | null>(null)
++	useEffect(
++		() => () => {
++			if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current)
++		},
++		[],
++	)
++	const scheduleScrollToBottom = useCallback(() => {
++		if (scrollRafRef.current !== null) return
++		scrollRafRef.current = requestAnimationFrame(() => {
++			scrollRafRef.current = null
++			virtuosoRef.current?.scrollTo({ top: Number.MAX_SAFE_INTEGER, behavior: "auto" })
++		})
++	}, [])
++
+ 	const scrollToMessage = useCallback(
+ 		(messageIndex: number) => {
+ 			setPendingScrollToMessage(messageIndex)
+@@ -262,18 +280,15 @@ export function useScrollBehavior(
+ 	)
+ 
+ 	const handleRowHeightChange = useCallback(
+-		(isTaller: boolean) => {
++		(_isTaller: boolean) => {
+ 			if (!disableAutoScrollRef.current) {
+-				if (isTaller) {
+-					scrollToBottomSmooth()
+-				} else {
+-					setTimeout(() => {
+-						scrollToBottomAuto()
+-					}, 0)
+-				}
++				// Use rAF-throttled instant scroll for all streaming height changes.
++				// This prevents multiple competing smooth-scroll animations that cause
++				// visible jumping when fast providers like OpenAI stream token-by-token.
++				scheduleScrollToBottom()
+ 			}
+ 		},
+-		[scrollToBottomSmooth, scrollToBottomAuto],
++		[scheduleScrollToBottom],
+ 	)
+ 
+ 	useEffect(() => {
+diff --git a/webview-ui/src/components/chat/task-header/ContextWindow.tsx b/webview-ui/src/components/chat/task-header/ContextWindow.tsx
+index e63a43c27..e8d00852c 100644
+--- a/webview-ui/src/components/chat/task-header/ContextWindow.tsx
++++ b/webview-ui/src/components/chat/task-header/ContextWindow.tsx
+@@ -1,10 +1,9 @@
+ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+-import debounce from "debounce"
+-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
++import type React from "react"
++import { memo, useCallback, useMemo, useState } from "react"
+ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+-import { Progress } from "@/components/ui/progress"
+ import { formatLargeNumber as formatTokenNumber } from "@/utils/format"
+-import CompactTaskButton from "./buttons/CompactTaskButton"
++import ContextWindowRing from "./ContextWindowRing"
+ import { ContextWindowSummary } from "./ContextWindowSummary"
+ 
+ // Type definitions
+@@ -17,7 +16,6 @@ interface ContextWindowInfoProps {
+ }
+ 
+ interface ContextWindowProgressProps extends ContextWindowInfoProps {
+-	useAutoCondense: boolean
+ 	lastApiReqTotalTokens?: number
+ 	contextWindow?: number
+ 	onSendMessage?: (command: string, files: string[], images: string[]) => void
+@@ -56,18 +54,15 @@ const ContextWindow: React.FC<ContextWindowProgressProps> = ({
+ 	contextWindow = 0,
+ 	lastApiReqTotalTokens = 0,
+ 	onSendMessage,
+-	useAutoCondense,
+ 	tokensIn,
+ 	tokensOut,
+ 	cacheWrites,
+ 	cacheReads,
+ }) => {
+-	const [isOpened, setIsOpened] = useState(false)
+ 	const [confirmationNeeded, setConfirmationNeeded] = useState(false)
+-	const progressBarRef = useRef<HTMLDivElement>(null)
+ 
+ 	const handleCompactClick = useCallback(
+-		(e: React.MouseEvent) => {
++		(e: React.MouseEvent<HTMLButtonElement>) => {
+ 			e.preventDefault()
+ 			e.stopPropagation()
+ 			setConfirmationNeeded(!confirmationNeeded)
+@@ -102,84 +97,38 @@ const ContextWindow: React.FC<ContextWindowProgressProps> = ({
+ 		}
+ 	}, [contextWindow, lastApiReqTotalTokens])
+ 
+-	const debounceCloseHover = useCallback((e: React.MouseEvent) => {
+-		e.preventDefault()
+-		e.stopPropagation()
+-		const showHover = debounce((open: boolean) => setIsOpened(open), 100)
+-
+-		return showHover(false)
+-	}, [])
+-
+-	const handleFocus = useCallback(() => {
+-		setIsOpened(true)
+-	}, [])
+-
+-	// Close tooltip when clicking outside
+-	useEffect(() => {
+-		const handleClickOutside = (event: MouseEvent) => {
+-			const target = event.target as Element
+-			const isInsideProgressBar = progressBarRef.current?.contains(target as Node)
+-
+-			// Check if click is inside any tooltip content by looking for our custom class
+-			const isInsideTooltipContent = target.closest(".context-window-tooltip-content") !== null
+-
+-			if (!isInsideProgressBar && !isInsideTooltipContent) {
+-				setIsOpened(false)
+-			}
+-		}
+-
+-		if (isOpened) {
+-			document.addEventListener("mousedown", handleClickOutside)
+-			return () => document.removeEventListener("mousedown", handleClickOutside)
+-		}
+-	}, [isOpened])
+-
+ 	if (!tokenData) {
+ 		return null
+ 	}
+ 
+ 	return (
+-		<div className="flex flex-col my-1.5" onMouseLeave={debounceCloseHover}>
+-			<div className="flex gap-1 flex-row @max-xs:flex-col @max-xs:items-start items-center text-sm">
+-				<div className="flex items-center gap-1.5 flex-1 whitespace-nowrap">
+-					<span className="cursor-pointer text-sm" title="Current tokens used in this request">
+-						{formatTokenNumber(tokenData.used)}
+-					</span>
+-					<div className="flex relative items-center gap-1 flex-1 w-full h-full" onMouseEnter={() => setIsOpened(true)}>
+-						<HoverCard>
+-							<HoverCardContent className="bg-menu rounded-xs shadow-sm">
+-								<ContextWindowSummary
+-									cacheReads={cacheReads}
+-									cacheWrites={cacheWrites}
+-									contextWindow={tokenData.max}
+-									percentage={tokenData.percentage}
+-									tokensIn={tokensIn}
+-									tokensOut={tokensOut}
+-									tokenUsed={tokenData.used}
+-								/>
+-							</HoverCardContent>
+-							<HoverCardTrigger asChild>
+-								{/* TODO: Re-add role="slider", aria-value*, onKeyDown, onClick, and tabIndex
+-								    when click-to-set-threshold is implemented. See PR #9348 for context. */}
+-								<div
+-									className="relative w-full text-foreground context-window-progress brightness-100"
+-									onFocus={handleFocus}
+-									ref={progressBarRef}>
+-									<Progress
+-										aria-label="Context window usage progress"
+-										color="success"
+-										value={tokenData.percentage}
+-									/>
+-									{isOpened}
+-								</div>
+-							</HoverCardTrigger>
+-						</HoverCard>
+-					</div>
+-					<span className="cursor-pointer text-sm" title="Maximum context window size for this model">
+-						{formatTokenNumber(tokenData.max)}
+-					</span>
+-				</div>
+-				<CompactTaskButton onClick={handleCompactClick} />
++		<div className="flex flex-col gap-1">
++			<div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
++				<HoverCard>
++					<HoverCardTrigger asChild>
++						<button
++							aria-label={`Context usage ${Math.round(tokenData.percentage)} percent`}
++							className="inline-flex items-center rounded-xs p-0.5 hover:bg-foreground/5"
++							type="button">
++							<ContextWindowRing percentage={tokenData.percentage} />
++						</button>
++					</HoverCardTrigger>
++					<HoverCardContent align="end" className="bg-menu shadow-sm" side="bottom" sideOffset={6}>
++						<ContextWindowSummary
++							cacheReads={cacheReads}
++							cacheWrites={cacheWrites}
++							contextWindow={tokenData.max}
++							onCompactClick={handleCompactClick}
++							percentage={tokenData.percentage}
++							tokensIn={tokensIn}
++							tokensOut={tokensOut}
++							tokenUsed={tokenData.used}
++						/>
++					</HoverCardContent>
++				</HoverCard>
++				<span className="hidden text-foreground/80 sm:inline">
++					{formatTokenNumber(tokenData.used)} / {formatTokenNumber(tokenData.max)}
++				</span>
+ 			</div>
+ 			{confirmationNeeded && <ConfirmationDialog onCancel={handleCancel} onConfirm={handleConfirm} />}
+ 		</div>
+diff --git a/webview-ui/src/components/chat/task-header/ContextWindowRing.tsx b/webview-ui/src/components/chat/task-header/ContextWindowRing.tsx
+new file mode 100644
+index 000000000..1a584fe4a
+--- /dev/null
++++ b/webview-ui/src/components/chat/task-header/ContextWindowRing.tsx
+@@ -0,0 +1,47 @@
++import type React from "react"
++import { memo } from "react"
++import { cn } from "@/lib/utils"
++
++interface ContextWindowRingProps {
++	percentage: number
++	className?: string
++}
++
++const ContextWindowRing: React.FC<ContextWindowRingProps> = ({ percentage, className }) => {
++	const clamped = Math.max(0, Math.min(100, percentage))
++	const radius = 7
++	const circumference = 2 * Math.PI * radius
++	const strokeDashoffset = circumference - (clamped / 100) * circumference
++
++	const progressColor = clamped >= 90 ? "text-error" : clamped >= 70 ? "text-warning" : "text-success"
++
++	return (
++		<span className={cn("inline-flex h-4 w-4 shrink-0", className)}>
++			<svg aria-hidden="true" className="h-4 w-4 -rotate-90" viewBox="0 0 20 20">
++				<circle
++					className="text-muted-foreground/25"
++					cx="10"
++					cy="10"
++					fill="none"
++					r={radius}
++					stroke="currentColor"
++					strokeWidth="2"
++				/>
++				<circle
++					className={cn("transition-all duration-200", progressColor)}
++					cx="10"
++					cy="10"
++					fill="none"
++					r={radius}
++					stroke="currentColor"
++					strokeDasharray={circumference}
++					strokeDashoffset={strokeDashoffset}
++					strokeLinecap="round"
++					strokeWidth="2"
++				/>
++			</svg>
++		</span>
++	)
++}
++
++export default memo(ContextWindowRing)
+diff --git a/webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx b/webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx
+index c4c07730b..2c53b7d30 100644
+--- a/webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx
++++ b/webview-ui/src/components/chat/task-header/ContextWindowSummary.tsx
+@@ -1,5 +1,5 @@
+-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
+-import React, { memo, useCallback, useMemo, useState } from "react"
++import type React from "react"
++import { Button } from "@/components/ui/button"
+ import { formatLargeNumber as formatTokenNumber } from "@/utils/format"
+ 
+ interface TokenUsageInfoProps {
+@@ -9,86 +9,13 @@ interface TokenUsageInfoProps {
+ 	cacheReads?: number
+ }
+ 
+-interface TokenDetail {
+-	title: string
+-	value?: number
+-	icon: string
+-}
+-
+ interface TaskContextWindowButtonsProps extends TokenUsageInfoProps {
+ 	percentage: number
+ 	tokenUsed: number
+ 	contextWindow: number
+-	autoCompactThreshold?: number
+-	isThresholdChanged?: boolean
+-	isThresholdFadingOut?: boolean
++	onCompactClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
+ }
+ 
+-// New accordion item component
+-const AccordionItem = memo<{
+-	title: string
+-	value: React.ReactNode
+-	isExpanded: boolean
+-	onToggle: (event?: React.MouseEvent) => void
+-	children?: React.ReactNode
+-}>(({ title, value, isExpanded, onToggle, children }) => {
+-	const handleClick = useCallback(
+-		(event: React.MouseEvent) => {
+-			event.preventDefault()
+-			event.stopPropagation()
+-			onToggle(event)
+-		},
+-		[onToggle],
+-	)
+-
+-	return (
+-		<div className="flex flex-col w-full">
+-			<div
+-				className="flex justify-between items-center gap-1 cursor-pointer hover:bg-foreground/5 rounded p-0.5 transition-colors w-full"
+-				onClick={handleClick}>
+-				<div className="flex items-center gap-1">
+-					{isExpanded ? <ChevronDownIcon size={12} /> : <ChevronRightIcon size={12} />}
+-					<div className="font-semibold">{title}</div>
+-				</div>
+-				<div className="text-muted-foreground">{value}</div>
+-			</div>
+-			{isExpanded && children && <div className="ml-5 my-1 text-xs text-muted-foreground">{children}</div>}
+-		</div>
+-	)
+-})
+-AccordionItem.displayName = "AccordionItem"
+-
+-// Constants
+-const TOKEN_DETAILS_CONFIG: Omit<TokenDetail, "value">[] = [
+-	{ title: "Prompt Tokens", icon: "codicon-arrow-up" },
+-	{ title: "Completion Tokens", icon: "codicon-arrow-down" },
+-	{ title: "Cache Writes", icon: "codicon-arrow-left" },
+-	{ title: "Cache Reads", icon: "codicon-arrow-right" },
+-]
+-
+-const TokenUsageDetails = memo<TokenUsageInfoProps>(({ tokensIn, tokensOut, cacheWrites, cacheReads }) => {
+-	const contextTokenDetails = useMemo(() => {
+-		const values = [tokensIn, tokensOut, cacheWrites || 0, cacheReads || 0]
+-		return TOKEN_DETAILS_CONFIG.map((config, index) => ({ ...config, value: values[index] })).filter((item) => item.value)
+-	}, [tokensIn, tokensOut, cacheWrites, cacheReads])
+-
+-	if (!tokensIn) {
+-		return <div>No token usage data available</div>
+-	}
+-
+-	return (
+-		<div className="space-y-1">
+-			{contextTokenDetails.map((item) => (
+-				<div className="flex justify-between">
+-					<span>{item.title}</span>
+-					<span className="font-mono">{formatTokenNumber(item.value || 0)}</span>
+-				</div>
+-			))}
+-		</div>
+-	)
+-})
+-TokenUsageDetails.displayName = "TokenUsageDetails"
+-
+ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
+ 	contextWindow,
+ 	tokenUsed,
+@@ -97,83 +24,37 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
+ 	cacheWrites,
+ 	cacheReads,
+ 	percentage,
+-	autoCompactThreshold = 0,
++	onCompactClick,
+ }) => {
+-	// Accordion state
+-	const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+-
+-	const toggleSection = useCallback((section: string, event?: React.MouseEvent) => {
+-		if (event) {
+-			event.preventDefault()
+-			event.stopPropagation()
+-		}
+-		setExpandedSections((prev) => {
+-			const newSet = new Set(prev)
+-			if (newSet.has(section)) {
+-				newSet.delete(section)
+-			} else {
+-				newSet.add(section)
+-			}
+-			return newSet
+-		})
+-	}, [])
+-
+-	const totalTokens = (tokensIn || 0) + (tokensOut || 0) + (cacheWrites || 0) + (cacheReads || 0)
++	const clampedPercentage = Math.max(0, Math.min(100, percentage))
++	const totalTokenBreakdown = (tokensIn || 0) + (tokensOut || 0) + (cacheWrites || 0) + (cacheReads || 0)
++	const remaining = Math.max(0, contextWindow - tokenUsed)
+ 
+ 	return (
+-		<div className="context-window-tooltip-content flex flex-col gap-2 bg-menu rounded shadow-sm z-100 w-60 p-1">
+-			{autoCompactThreshold > 0 && (
+-				<AccordionItem
+-					isExpanded={expandedSections.has("threshold")}
+-					onToggle={(event) => toggleSection("threshold", event)}
+-					title="Auto Condense Threshold"
+-					value={<span className="text-muted-foreground">{`${(autoCompactThreshold * 100).toFixed(0)}%`}</span>}>
+-					<div className="space-y-1">
+-						<p className="text-xs leading-relaxed text-white">
+-							Click on the context window bar to set a new threshold.
+-						</p>
+-						<p className="text-xs leading-relaxed mt-0 mb-0">
+-							When the context window usage exceeds this threshold, the task will be automatically condensed.
+-						</p>
+-					</div>
+-				</AccordionItem>
+-			)}
+-
+-			<AccordionItem
+-				isExpanded={expandedSections.has("context")}
+-				onToggle={(event) => toggleSection("context", event)}
+-				title="Context Window"
+-				value={percentage ? `${percentage.toFixed(1)}%` : formatTokenNumber(contextWindow)}>
+-				<div className="space-y-1">
+-					<div className="flex justify-between">
+-						<span>Used:</span>
+-						<span className="font-mono">{formatTokenNumber(tokenUsed)}</span>
+-					</div>
+-					<div className="flex justify-between">
+-						<span>Total:</span>
+-						<span className="font-mono">{formatTokenNumber(contextWindow)}</span>
+-					</div>
+-					<div className="flex justify-between">
+-						<span>Remaining:</span>
+-						<span className="font-mono">{formatTokenNumber(contextWindow - tokenUsed)}</span>
+-					</div>
++		<div className="context-window-tooltip-content flex w-60 flex-col gap-2 rounded-xs bg-menu p-2 text-xs shadow-sm">
++			<div className="flex items-center justify-between font-semibold text-foreground">
++				<span>Context Window</span>
++				<span>{clampedPercentage.toFixed(1)}%</span>
++			</div>
++			<div className="flex items-center justify-between text-muted-foreground">
++				<span>Used / Total</span>
++				<span className="font-mono text-foreground">
++					{formatTokenNumber(tokenUsed)} / {formatTokenNumber(contextWindow)}
++				</span>
++			</div>
++			<div className="flex items-center justify-between text-muted-foreground">
++				<span>Remaining</span>
++				<span className="font-mono text-foreground">{formatTokenNumber(remaining)}</span>
++			</div>
++			{totalTokenBreakdown > 0 && (
++				<div className="flex items-center justify-between text-muted-foreground">
++					<span>Token Breakdown</span>
++					<span className="font-mono text-foreground">{formatTokenNumber(totalTokenBreakdown)}</span>
+ 				</div>
+-			</AccordionItem>
+-
+-			{totalTokens > 0 && (
+-				<AccordionItem
+-					isExpanded={expandedSections.has("tokens")}
+-					onToggle={(event) => toggleSection("tokens", event)}
+-					title="Token Usage"
+-					value={`${formatTokenNumber(totalTokens)}`}>
+-					<TokenUsageDetails
+-						cacheReads={cacheReads}
+-						cacheWrites={cacheWrites}
+-						tokensIn={tokensIn}
+-						tokensOut={tokensOut}
+-					/>
+-				</AccordionItem>
+ 			)}
++			<Button className="mt-1 w-full" onClick={onCompactClick} size="xs" variant="secondary">
++				Compact Task
++			</Button>
+ 		</div>
+ 	)
+ }
+diff --git a/webview-ui/src/components/chat/task-header/TaskHeader.stories.tsx b/webview-ui/src/components/chat/task-header/TaskHeader.stories.tsx
+index a0279198c..59db80936 100644
+--- a/webview-ui/src/components/chat/task-header/TaskHeader.stories.tsx
++++ b/webview-ui/src/components/chat/task-header/TaskHeader.stories.tsx
+@@ -1,4 +1,4 @@
+-import { ClineMessage } from "@shared/ExtensionMessage"
++import type { ClineMessage } from "@shared/ExtensionMessage"
+ import type { Meta, StoryObj } from "@storybook/react-vite"
+ import { createStorybookDecorator } from "@/config/StorybookDecorator"
+ import { Environment } from "../../../../../src/config"
+@@ -12,7 +12,7 @@ const meta: Meta<typeof TaskHeader> = {
+ 		docs: {
+ 			description: {
+ 				component:
+-					"TaskHeader displays task information, token usage, cost, and provides controls for task management. It includes expandable details, context window visualization, and task timeline.",
++					"TaskHeader displays a compact chat title row with context usage status, quick new-chat action, and task timeline context.",
+ 			},
+ 		},
+ 	},
+@@ -111,7 +111,7 @@ export const Expanded: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+ 				actModeApiModelId: "claude-3-5-sonnet-20241022",
+@@ -122,7 +122,7 @@ export const Expanded: Story = {
+ 	parameters: {
+ 		docs: {
+ 			description: {
+-				story: "TaskHeader in expanded state showing full task details, context window, and timeline.",
++				story: "TaskHeader compact state with context ring and hover details.",
+ 			},
+ 		},
+ 	},
+@@ -145,7 +145,7 @@ export const WithImages: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+ 				actModeApiModelId: "claude-3-5-sonnet-20241022",
+@@ -179,7 +179,7 @@ export const WithFiles: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+ 				actModeApiModelId: "claude-3-5-sonnet-20241022",
+@@ -211,7 +211,7 @@ export const LongTaskText: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+ 				actModeApiModelId: "claude-3-5-sonnet-20241022",
+@@ -222,7 +222,7 @@ export const LongTaskText: Story = {
+ 	parameters: {
+ 		docs: {
+ 			description: {
+-				story: "TaskHeader with long task text that can be expanded to show full content.",
++				story: "TaskHeader with long task text in compact single-line truncation.",
+ 			},
+ 		},
+ 	},
+@@ -242,7 +242,7 @@ export const HighTokenUsage: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+ 				actModeApiModelId: "claude-3-5-sonnet-20241022",
+@@ -275,7 +275,7 @@ export const NoCost: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "ollama",
+ 				actModeApiModelId: "llama3.2",
+@@ -303,7 +303,7 @@ export const WithCheckpointError: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			checkpointManagerErrorMessage: "Git is not installed or not configured properly disabling checkpoints.",
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+@@ -336,7 +336,7 @@ export const WithProgressMessage: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+ 				actModeApiModelId: "claude-3-5-sonnet-20241022",
+@@ -364,7 +364,7 @@ export const LocalEnvironment: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			environment: Environment.local,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+@@ -393,7 +393,7 @@ export const StagingEnvironment: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			environment: Environment.staging,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+@@ -422,7 +422,7 @@ export const ProductionEnvironment: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			environment: Environment.production,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+@@ -451,7 +451,7 @@ export const MinimalTask: Story = {
+ 	},
+ 	decorators: [
+ 		createStorybookDecorator({
+-			expandTaskHeader: true,
++			expandTaskHeader: false,
+ 			apiConfiguration: {
+ 				actModeApiProvider: "anthropic",
+ 				actModeApiModelId: "claude-3-5-sonnet-20241022",
+diff --git a/webview-ui/src/components/chat/task-header/TaskHeader.tsx b/webview-ui/src/components/chat/task-header/TaskHeader.tsx
+index 5273cff4d..46d1470cc 100644
+--- a/webview-ui/src/components/chat/task-header/TaskHeader.tsx
++++ b/webview-ui/src/components/chat/task-header/TaskHeader.tsx
+@@ -1,21 +1,15 @@
+-import { ClineMessage } from "@shared/ExtensionMessage"
+-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
+-import React, { useCallback, useLayoutEffect, useMemo, useState } from "react"
+-import Thumbnails from "@/components/common/Thumbnails"
+-import { getModeSpecificFields, normalizeApiConfiguration } from "@/components/settings/utils/providerUtils"
++import type { ClineMessage } from "@shared/ExtensionMessage"
++import type React from "react"
++import { useCallback, useMemo } from "react"
++import { normalizeApiConfiguration } from "@/components/settings/utils/providerUtils"
+ import { useExtensionState } from "@/context/ExtensionStateContext"
+ import { cn } from "@/lib/utils"
+ import { getEnvironmentColor } from "@/utils/environmentColors"
+-import CopyTaskButton from "./buttons/CopyTaskButton"
+-import DeleteTaskButton from "./buttons/DeleteTaskButton"
+ import NewTaskButton from "./buttons/NewTaskButton"
+-import OpenDiskConversationHistoryButton from "./buttons/OpenDiskConversationHistoryButton"
+ import { CheckpointError } from "./CheckpointError"
+ import ContextWindow from "./ContextWindow"
+-import { FocusChain } from "./FocusChain"
+ import { highlightText } from "./Highlights"
+ 
+-const IS_DEV = process.env.IS_DEV === '"true"'
+ interface TaskHeaderProps {
+ 	task: ClineMessage
+ 	tokensIn: number
+@@ -31,80 +25,21 @@ interface TaskHeaderProps {
+ 	onSendMessage?: (command: string, files: string[], images: string[]) => void
+ }
+ 
+-const BUTTON_CLASS = "max-h-3 border-0 font-bold bg-transparent hover:opacity-100 text-foreground"
+-
+ const TaskHeader: React.FC<TaskHeaderProps> = ({
+ 	task,
+ 	tokensIn,
+ 	tokensOut,
+ 	cacheWrites,
+ 	cacheReads,
+-	totalCost,
+ 	lastApiReqTotalTokens,
+-	lastProgressMessageText,
+-	showFocusChainPlaceholder,
+ 	onClose,
+ 	onSendMessage,
+ }) => {
+-	const {
+-		apiConfiguration,
+-		currentTaskItem,
+-		checkpointManagerErrorMessage,
+-		focusChainSettings,
+-		navigateToSettings,
+-		mode,
+-		expandTaskHeader: isTaskExpanded,
+-		setExpandTaskHeader: setIsTaskExpanded,
+-		environment,
+-	} = useExtensionState()
+-
+-	const [isHighlightedTextExpanded, setIsHighlightedTextExpanded] = useState(false)
+-	const [isTextOverflowing, setIsTextOverflowing] = useState(false)
+-	const highlightedTextRef = React.useRef<HTMLDivElement>(null)
++	const { apiConfiguration, checkpointManagerErrorMessage, navigateToSettings, mode, environment } = useExtensionState()
+ 
+ 	const highlightedText = useMemo(() => highlightText(task.text, false), [task.text])
+ 
+-	// Check if text overflows the container (i.e., needs clamping)
+-	useLayoutEffect(() => {
+-		const el = highlightedTextRef.current
+-		if (el && isTaskExpanded && !isHighlightedTextExpanded) {
+-			// Check if content height exceeds the max-height
+-			setIsTextOverflowing(el.scrollHeight > el.clientHeight)
+-		}
+-	}, [task.text, isTaskExpanded, isHighlightedTextExpanded])
+-
+-	// Handle click outside to collapse
+-	React.useEffect(() => {
+-		if (!isHighlightedTextExpanded) {
+-			return
+-		}
+-
+-		const handleClickOutside = (event: MouseEvent) => {
+-			if (highlightedTextRef.current && !highlightedTextRef.current.contains(event.target as Node)) {
+-				setIsHighlightedTextExpanded(false)
+-			}
+-		}
+-
+-		document.addEventListener("mousedown", handleClickOutside)
+-		return () => document.removeEventListener("mousedown", handleClickOutside)
+-	}, [isHighlightedTextExpanded])
+-
+-	// Simplified computed values
+ 	const { selectedModelInfo } = normalizeApiConfiguration(apiConfiguration, mode)
+-	const modeFields = getModeSpecificFields(apiConfiguration, mode)
+-
+-	const isCostAvailable =
+-		(totalCost &&
+-			modeFields.apiProvider === "openai" &&
+-			modeFields.openAiModelInfo?.inputPrice &&
+-			modeFields.openAiModelInfo?.outputPrice) ||
+-		(modeFields.apiProvider !== "vscode-lm" &&
+-			modeFields.apiProvider !== "ollama" &&
+-			modeFields.apiProvider !== "lmstudio" &&
+-			modeFields.apiProvider !== "openai-codex") // Subscription-based, no per-token costs
+-
+-	// Event handlers
+-	const toggleTaskExpanded = useCallback(() => setIsTaskExpanded(!isTaskExpanded), [setIsTaskExpanded, isTaskExpanded])
+ 
+ 	const handleCheckpointSettingsClick = useCallback(() => {
+ 		navigateToSettings("features")
+@@ -122,115 +57,32 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
+ 			{/* Task Header */}
+ 			<div
+ 				className={cn(
+-					"relative overflow-hidden cursor-pointer rounded-sm flex flex-col gap-1.5 z-10 pt-2 pb-2 px-2 hover:opacity-100 bg-(--vscode-toolbar-hoverBackground)/65",
+-					{
+-						"opacity-100 border-1": isTaskExpanded, // No hover effects when expanded, add border
+-						"hover:bg-toolbar-hover border-1": !isTaskExpanded, // Hover effects only when collapsed
+-					},
++					"relative z-10 flex items-center gap-2 overflow-hidden rounded-sm border-1 bg-(--vscode-toolbar-hoverBackground)/65 px-2 py-1.5 hover:bg-toolbar-hover",
+ 				)}
+ 				style={{
+ 					borderColor: environmentBorderColor,
+ 				}}>
+-				{/* Task Title */}
+-				<div
+-					aria-label={isTaskExpanded ? "Collapse task header" : "Expand task header"}
+-					className="flex justify-between items-center cursor-pointer"
+-					onClick={toggleTaskExpanded}
+-					onKeyDown={(e) => {
+-						if (e.key === "Enter" || e.key === " ") {
+-							e.preventDefault()
+-							e.stopPropagation()
+-							toggleTaskExpanded()
+-						}
+-					}}
+-					tabIndex={0}>
+-					<div className="flex justify-between items-center">
+-						{isTaskExpanded ? <ChevronDownIcon size="16" /> : <ChevronRightIcon size="16" />}
+-						{isTaskExpanded && (
+-							<div className="mt-1 flex justify-end cursor-pointer opacity-80 gap-2 mx-2">
+-								<CopyTaskButton className={BUTTON_CLASS} taskText={task.text} />
+-								<DeleteTaskButton
+-									className={BUTTON_CLASS}
+-									taskId={currentTaskItem?.id}
+-									taskSize={currentTaskItem?.size}
+-								/>
+-								{/* Only visible in development mode */}
+-								{IS_DEV && (
+-									<OpenDiskConversationHistoryButton className={BUTTON_CLASS} taskId={currentTaskItem?.id} />
+-								)}
+-							</div>
+-						)}
+-					</div>
+-					<div className="flex items-center select-none grow min-w-0 gap-1 justify-between">
+-						{!isTaskExpanded && (
+-							<div className="whitespace-nowrap overflow-hidden text-ellipsis grow min-w-0">
+-								<span className="ph-no-capture text-base">{highlightedText}</span>
+-							</div>
+-						)}
+-					</div>
+-					<div className="inline-flex items-center justify-end select-none shrink-0">
+-						{isCostAvailable && (
+-							<div
+-								className="mx-1 px-1 py-0.25 rounded-full inline-flex shrink-0 text-badge-background bg-badge-foreground/80 items-center"
+-								id="price-tag">
+-								<span className="text-xs sm:text-sm">${totalCost?.toFixed(4)}</span>
+-							</div>
+-						)}
+-						<NewTaskButton className={BUTTON_CLASS} onClick={onClose} />
+-					</div>
++				<div className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-ellipsis">
++					<span className="ph-no-capture text-base" title={task.text}>
++						{highlightedText}
++					</span>
++				</div>
++				<div className="inline-flex shrink-0 items-center gap-0.5">
++					<ContextWindow
++						cacheReads={cacheReads}
++						cacheWrites={cacheWrites}
++						contextWindow={selectedModelInfo?.contextWindow}
++						lastApiReqTotalTokens={lastApiReqTotalTokens}
++						onSendMessage={onSendMessage}
++						tokensIn={tokensIn}
++						tokensOut={tokensOut}
++					/>
++					<NewTaskButton
++						className="max-h-3 border-0 bg-transparent font-bold text-foreground hover:opacity-100"
++						onClick={onClose}
++					/>
+ 				</div>
+-
+-				{/* Expand/Collapse Task Details */}
+-				{isTaskExpanded && (
+-					<div className="flex flex-col break-words" key={`task-details-${currentTaskItem?.id}`}>
+-						<div
+-							className={cn(
+-								"ph-no-capture whitespace-pre-wrap break-words px-0.5 text-sm mt-1 relative",
+-								"max-h-[4.5rem] overflow-hidden",
+-								{
+-									"max-h-[25vh] overflow-y-auto scroll-smooth": isHighlightedTextExpanded,
+-									"cursor-pointer": isTextOverflowing,
+-								},
+-							)}
+-							onClick={() => isTextOverflowing && setIsHighlightedTextExpanded(true)}
+-							ref={highlightedTextRef}
+-							style={
+-								!isHighlightedTextExpanded && isTextOverflowing
+-									? {
+-											WebkitMaskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
+-											maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
+-										}
+-									: undefined
+-							}>
+-							{highlightedText}
+-						</div>
+-
+-						{((task.images && task.images.length > 0) || (task.files && task.files.length > 0)) && (
+-							<Thumbnails files={task.files ?? []} images={task.images ?? []} />
+-						)}
+-
+-						<ContextWindow
+-							cacheReads={cacheReads}
+-							cacheWrites={cacheWrites}
+-							contextWindow={selectedModelInfo?.contextWindow}
+-							lastApiReqTotalTokens={lastApiReqTotalTokens}
+-							onSendMessage={onSendMessage}
+-							tokensIn={tokensIn}
+-							tokensOut={tokensOut}
+-							useAutoCondense={false} // Disable auto-condense configuration in UI for now
+-						/>
+-					</div>
+-				)}
+ 			</div>
+-
+-			{/* Display Focus Chain To-Do List */}
+-			{focusChainSettings.enabled && (
+-				<FocusChain
+-					currentTaskItemId={currentTaskItem?.id}
+-					lastProgressMessageText={lastProgressMessageText}
+-					showPlaceholderWhenEmpty={showFocusChainPlaceholder}
+-				/>
+-			)}
+ 		</div>
+ 	)
+ }
+diff --git a/webview-ui/src/components/chat/task-header/buttons/NewTaskButton.tsx b/webview-ui/src/components/chat/task-header/buttons/NewTaskButton.tsx
+index 463916e98..c21351d6c 100644
+--- a/webview-ui/src/components/chat/task-header/buttons/NewTaskButton.tsx
++++ b/webview-ui/src/components/chat/task-header/buttons/NewTaskButton.tsx
+@@ -1,4 +1,4 @@
+-import { XIcon } from "lucide-react"
++import { MessageSquarePlusIcon } from "lucide-react"
+ import { Button } from "@/components/ui/button"
+ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+ import { cn } from "@/lib/utils"
+@@ -9,10 +9,10 @@ const NewTaskButton: React.FC<{
+ }> = ({ className, onClick }) => {
+ 	return (
+ 		<Tooltip>
+-			<TooltipContent side="left">Start a New Task</TooltipContent>
++			<TooltipContent side="left">Start New Chat</TooltipContent>
+ 			<TooltipTrigger className={cn("flex items-center", className)}>
+ 				<Button
+-					aria-label="New Task"
++					aria-label="Start New Chat"
+ 					onClick={(e) => {
+ 						e.preventDefault()
+ 						e.stopPropagation()
+@@ -20,7 +20,7 @@ const NewTaskButton: React.FC<{
+ 					}}
+ 					size="icon"
+ 					variant="icon">
+-					<XIcon />
++					<MessageSquarePlusIcon />
+ 				</Button>
+ 			</TooltipTrigger>
+ 		</Tooltip>
+diff --git a/webview-ui/src/components/history/HistoryPreview.tsx b/webview-ui/src/components/history/HistoryPreview.tsx
+index c2a2a9af0..bf8597dfa 100644
+--- a/webview-ui/src/components/history/HistoryPreview.tsx
++++ b/webview-ui/src/components/history/HistoryPreview.tsx
+@@ -118,7 +118,8 @@ const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
+ 						style={{
+ 							marginRight: "4px",
+ 							transform: "scale(0.9)",
+-						}}></span>
++						}}
++					/>
+ 					<span
+ 						style={{
+ 							fontWeight: 500,
+@@ -163,9 +164,6 @@ const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
+ 									</div>
+ 									<div className="history-meta-stack">
+ 										<span className="history-date">{formatDate(item.ts)}</span>
+-										{item.totalCost != null && (
+-											<span className="history-cost-chip">${item.totalCost.toFixed(2)}</span>
+-										)}
+ 									</div>
+ 								</div>
+ 							))
+diff --git a/webview-ui/src/components/history/HistoryViewItem.tsx b/webview-ui/src/components/history/HistoryViewItem.tsx
+index d2ac6c16f..b525fc284 100644
+--- a/webview-ui/src/components/history/HistoryViewItem.tsx
++++ b/webview-ui/src/components/history/HistoryViewItem.tsx
+@@ -1,4 +1,4 @@
+-import { HistoryItem } from "@shared/HistoryItem"
++import type { HistoryItem } from "@shared/HistoryItem"
+ import { StringRequest } from "@shared/proto/cline/common"
+ import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+ import {
+@@ -140,7 +140,6 @@ const HistoryViewItem = ({
+ 					<div className="flex items-center justify-between w-full">
+ 						<div className="text-description text-xs uppercase">{formatDate(item.ts)}</div>
+ 						<div className="self-end flex items-center text-xs">
+-							<span className="text-description">${item.totalCost?.toFixed(4) ?? 0}</span>
+ 							{expanded ? (
+ 								<ChevronsDownUpIcon className="text-description" />
+ 							) : (
+diff --git a/webview-ui/src/components/menu/Navbar.tsx b/webview-ui/src/components/menu/Navbar.tsx
+index 0bb41d735..c096b21e8 100644
+--- a/webview-ui/src/components/menu/Navbar.tsx
++++ b/webview-ui/src/components/menu/Navbar.tsx
+@@ -1,20 +1,12 @@
+-import { HistoryIcon, PlusIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
++import { HistoryIcon, PlusIcon, SettingsIcon } from "lucide-react"
+ import { useMemo } from "react"
+ import { Button } from "@/components/ui/button"
+ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+ import { TaskServiceClient } from "@/services/grpc-client"
+ import { useExtensionState } from "../../context/ExtensionStateContext"
+ 
+-// Custom MCP Server Icon component using VSCode codicon
+-const McpServerIcon = ({ className, size }: { className?: string; size?: number }) => (
+-	<span
+-		className={`codicon codicon-server flex items-center ${className || ""}`}
+-		style={{ fontSize: size ? `${size}px` : "12.5px", marginBottom: "1px" }}
+-	/>
+-)
+-
+ export const Navbar = () => {
+-	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMcp, navigateToChat } = useExtensionState()
++	const { navigateToHistory, navigateToSettings, navigateToChat } = useExtensionState()
+ 
+ 	const SETTINGS_TABS = useMemo(
+ 		() => [
+@@ -32,13 +24,6 @@ export const Navbar = () => {
+ 						.finally(() => navigateToChat())
+ 				},
+ 			},
+-			{
+-				id: "mcp",
+-				name: "MCP",
+-				tooltip: "MCP Servers",
+-				icon: McpServerIcon,
+-				navigate: navigateToMcp,
+-			},
+ 			{
+ 				id: "history",
+ 				name: "History",
+@@ -46,13 +31,6 @@ export const Navbar = () => {
+ 				icon: HistoryIcon,
+ 				navigate: navigateToHistory,
+ 			},
+-			{
+-				id: "account",
+-				name: "Account",
+-				tooltip: "Account",
+-				icon: UserCircleIcon,
+-				navigate: navigateToAccount,
+-			},
+ 			{
+ 				id: "settings",
+ 				name: "Settings",
+@@ -61,7 +39,7 @@ export const Navbar = () => {
+ 				navigate: navigateToSettings,
+ 			},
+ 		],
+-		[navigateToAccount, navigateToChat, navigateToHistory, navigateToMcp, navigateToSettings],
++		[navigateToChat, navigateToHistory, navigateToSettings],
+ 	)
+ 
+ 	return (
+diff --git a/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx b/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
+index 5779674d0..222018fb6 100644
+--- a/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
++++ b/webview-ui/src/components/settings/sections/FeatureSettingsSection.tsx
+@@ -1,10 +1,13 @@
+-import { UpdateSettingsRequest } from "@shared/proto/cline/state"
++import { type UpdateSettingsRequest, UpdateSettingsRequestCli } from "@shared/proto/cline/state"
+ import { memo, type ReactNode, useCallback } from "react"
++import { ACTION_METADATA } from "@/components/chat/auto-approve-menu/constants"
+ import { Label } from "@/components/ui/label"
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+ import { Switch } from "@/components/ui/switch"
+ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+ import { useExtensionState } from "@/context/ExtensionStateContext"
++import { useAutoApproveActions } from "@/hooks/useAutoApproveActions"
++import { StateServiceClient } from "@/services/grpc-client"
+ import Section from "../Section"
+ import SettingsSlider from "../SettingsSlider"
+ import { updateSetting } from "../utils/settingsHandlers"
+@@ -102,7 +105,7 @@ const editorFeatures: FeatureToggle[] = [
+ 	},
+ 	{
+ 		id: "cline-web-tools",
+-		label: "Cline Web Tools",
++		label: "Resonance Web Tools",
+ 		description: "Access web browsing and search capabilities",
+ 		stateKey: "clineWebToolsEnabled",
+ 		settingKey: "clineWebToolsEnabled",
+@@ -110,7 +113,7 @@ const editorFeatures: FeatureToggle[] = [
+ 	{
+ 		id: "worktrees",
+ 		label: "Worktrees",
+-		description: "Enables git worktree management for running parallel Cline tasks.",
++		description: "Enables git worktree management for running parallel Resonance tasks.",
+ 		stateKey: "worktreesEnabled",
+ 		settingKey: "worktreesEnabled",
+ 	},
+@@ -217,6 +220,8 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 		yoloModeToggled,
+ 		useAutoCondense,
+ 		subagentsEnabled,
++		autoApproveAllToggled,
++		autoApprovalSettings,
+ 		clineWebToolsEnabled,
+ 		worktreesEnabled,
+ 		focusChainSettings,
+@@ -236,7 +241,22 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 		[focusChainSettings],
+ 	)
+ 
++	const handleAutoApproveAllChange = useCallback((checked: boolean) => {
++		StateServiceClient.updateSettingsCli(
++			UpdateSettingsRequestCli.create({
++				settings: {
++					autoApproveAllToggled: checked,
++				},
++			}),
++		).catch((error) => {
++			console.error("Failed to update autoApproveAllToggled:", error)
++		})
++	}, [])
++
++	const { isChecked: isAutoApproveActionChecked, updateAction: updateAutoApproveAction } = useAutoApproveActions()
++
+ 	const isYoloRemoteLocked = remoteConfigSettings?.yoloModeToggled !== undefined
++	const isAutoApproveAllRemoteLocked = remoteConfigSettings?.autoApproveAllToggled !== undefined
+ 
+ 	// State lookup for mapped features
+ 	const featureState: Record<string, boolean | undefined> = {
+@@ -254,6 +274,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 		backgroundEditEnabled,
+ 		doubleCheckCompletionEnabled,
+ 		lazyTeammateModeEnabled,
++		autoApproveAllToggled: isAutoApproveAllRemoteLocked ? remoteConfigSettings?.autoApproveAllToggled : autoApproveAllToggled,
+ 		yoloModeToggled: isYoloRemoteLocked ? remoteConfigSettings?.yoloModeToggled : yoloModeToggled,
+ 	}
+ 
+@@ -321,6 +342,71 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
+ 						</div>
+ 					</div>
+ 
++					{/* Auto-approve */}
++					<div>
++						<div className="text-xs font-medium text-foreground/80 uppercase tracking-wider mb-3">Auto-approve</div>
++						<div
++							className="relative p-3 pt-0 my-3 rounded-md border border-editor-widget-border/50"
++							id="auto-approve-features">
++							<FeatureRow
++								checked={featureState.autoApproveAllToggled}
++								description="Bypass all approval prompts for tools and actions."
++								disabled={isAutoApproveAllRemoteLocked}
++								isRemoteLocked={isAutoApproveAllRemoteLocked}
++								label="Auto-approve Everything"
++								onChange={handleAutoApproveAllChange}
++								remoteTooltip="This setting is managed by your organization's remote configuration"
++							/>
++							{!featureState.autoApproveAllToggled && (
++								<>
++									<div className="border-t border-editor-widget-border/30 my-1" />
++									<p className="text-xs text-muted-foreground mb-1">
++										Or pick individual actions to auto-approve:
++									</p>
++									{ACTION_METADATA.map((action) => (
++										<div key={action.id}>
++											<FeatureRow
++												checked={isAutoApproveActionChecked(action)}
++												description=""
++												label={action.label}
++												onChange={(checked) => updateAutoApproveAction(action, checked)}
++											/>
++											{action.subAction && (
++												<div className="pl-6">
++													<FeatureRow
++														checked={isAutoApproveActionChecked(action.subAction)}
++														description=""
++														label={action.subAction.label}
++														onChange={(checked) =>
++															updateAutoApproveAction(action.subAction!, checked)
++														}
++													/>
++												</div>
++											)}
++										</div>
++									))}
++									<div className="border-t border-editor-widget-border/30 my-1" />
++									<FeatureRow
++										checked={autoApprovalSettings.enableNotifications}
++										description=""
++										label="Enable notifications"
++										onChange={(checked) =>
++											updateAutoApproveAction(
++												{
++													id: "enableNotifications",
++													label: "Enable notifications",
++													shortName: "Notifications",
++													icon: "",
++												},
++												checked,
++											)
++										}
++									/>
++								</>
++							)}
++						</div>
++					</div>
++
+ 					{/* Editor features */}
+ 					<div>
+ 						<div className="text-xs font-medium text-foreground/80 uppercase tracking-wider mb-3">Editor</div>
+diff --git a/webview-ui/src/theme.css b/webview-ui/src/theme.css
+index 7de5d94fc..eb099d2ea 100644
+--- a/webview-ui/src/theme.css
++++ b/webview-ui/src/theme.css
+@@ -149,6 +149,32 @@
+ 			transform: translateY(0);
+ 		}
+ 	}
++
++	--animate-dot-bounce: dotBounce 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
++	@keyframes dotBounce {
++		0%,
++		80%,
++		100% {
++			transform: scale(0.6);
++			opacity: 0.4;
++		}
++		40% {
++			transform: scale(1);
++			opacity: 1;
++		}
++	}
++
++	--animate-thinking-in: thinkingIn 0.12s cubic-bezier(0.34, 1.56, 0.64, 1) both;
++	@keyframes thinkingIn {
++		from {
++			opacity: 0;
++			transform: translateY(8px);
++		}
++		to {
++			opacity: 1;
++			transform: translateY(0);
++		}
++	}
+ }
+ 
+ @theme inline {
+@@ -359,3 +385,21 @@
+ 		}
+ 	}
+ }
++
++/* ─── Accessibility: Reduced Motion ──────────────────────────────────────────
++   Respects the OS "Reduce Motion" accessibility setting (WCAG 2.1 §2.3.3).
++   Collapses all animation/transition durations to a single frame so content
++   still appears (opacity changes) but no movement or looping occurs.
++   Covers Tailwind utilities (animate-spin, animate-pulse, animate-shimmer, etc.)
++   as well as all custom keyframes defined above.
++─────────────────────────────────────────────────────────────────────────────── */
++@media (prefers-reduced-motion: reduce) {
++	*,
++	*::before,
++	*::after {
++		animation-duration: 0.01ms !important;
++		animation-iteration-count: 1 !important;
++		transition-duration: 0.01ms !important;
++		scroll-behavior: auto !important;
++	}
++}
+-- 
+2.50.1
+

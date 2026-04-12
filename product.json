@@ -664,8 +664,8 @@
   "builtInExtensions": [
     {
       "name": "resonance-team.resonance",
-      "version": "3.57.1",
-      "sha256": "e17ee6cca5b2c3e577519b650be4a40d531ce5a3c17148fef51b1afb50934c30",
+      "version": "3.78.0",
+      "sha256": "020cb595abdbe405d6c872bba6e7bbb49285b82dd59dd56b2930601b585f67a3",
       "repo": "https://github.com/cline/cline",
       "vsix": "resonance/resonance.vsix",
       "metadata": {
@@ -682,7 +682,7 @@
     {
       "name": "softwaresupport-raab.resonance-office-viewer",
       "version": "3.5.5",
-      "sha256": "91582a18961dff9494b19fd48d2bbd3136afc6609f84ea5b4c67de91b9032cd9",
+      "sha256": "6b612cd30308136c325c063f38c6b33257313b265fea6b2a524d9a62bd9ee600",
       "repo": "https://github.com/softwaresupport-Raab/resonance-office",
       "vsix": "resonance/resonance-office-viewer.vsix",
       "metadata": {
