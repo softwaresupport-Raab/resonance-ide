@@ -26,6 +26,9 @@ Default settings and infrastructure fixes (codicon path, devtools script removal
 ### 006-e2e-tests.patch (1 file)
 Branding assertion update in e2e tests.
 
+### 007-tests-snapshot-update.patch (49 files)
+Updated unit-test snapshots for system prompt integration tests to match Resonance prompt/rules output.
+
 ## Quick Start
 
 ```bash
@@ -40,6 +43,7 @@ git apply ../cline-patches/003-commands.patch
 git apply ../cline-patches/004-ui-customization.patch
 git apply ../cline-patches/005-defaults-and-infra.patch
 git apply ../cline-patches/006-e2e-tests.patch
+git apply ../cline-patches/007-tests-snapshot-update.patch
 
 # 3. Install and build
 npm install
@@ -55,13 +59,14 @@ git am ../cline-patches/003-commands.patch
 git am ../cline-patches/004-ui-customization.patch
 git am ../cline-patches/005-defaults-and-infra.patch
 git am ../cline-patches/006-e2e-tests.patch
+git am ../cline-patches/007-tests-snapshot-update.patch
 ```
 
 ## Regenerating Patches
 
 ```bash
 cd resonance-extension
-# Ensure branch has exactly the 6 topic commits on top of v3.78.0
+# Ensure branch has exactly the 7 topic commits on top of v3.78.0
 git format-patch v3.78.0..HEAD -o ../resonance-ide/cline-patches/
 # Rename 0001-*.patch -> 001-system-prompt.patch, etc.
 ```
