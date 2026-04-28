@@ -1,0 +1,19 @@
+diff --git a/build/win32/code.iss b/build/win32/code.iss
+index 650384d..a478fed 100644
+--- a/build/win32/code.iss
++++ b/build/win32/code.iss
+@@ -8,10 +8,10 @@
+ AppId={#AppId}
+ AppName={#NameLong}
+ AppVerName={#NameVersion}
+-AppPublisher=Microsoft Corporation
+-AppPublisherURL=https://code.visualstudio.com/
+-AppSupportURL=https://code.visualstudio.com/
+-AppUpdatesURL=https://code.visualstudio.com/
++AppPublisher=Resonance
++AppPublisherURL=https://try.resonance-agent.io/beta
++AppSupportURL=https://try.resonance-agent.io/beta
++AppUpdatesURL=https://try.resonance-agent.io/beta
+ DefaultGroupName={#NameLong}
+ AllowNoIcons=yes
+ OutputDir={#OutputDir}
